@@ -65,6 +65,9 @@ ever moved.
 - Skips insertion if the property is already present — **idempotent**, so running the
   tool on its own output is byte-for-byte a no-op.
 - Preserves `UID`s untouched.
+- Stamps every event it writes with an extra category, `MyRJ Import <YYYY-MM>`, appended to the
+  existing `CATEGORIES` value. `SUMMARY` — the event title — is never touched. Re-running replaces
+  the stamp rather than accumulating labels, and the stamped line stays inside 75 octets.
 - A truncated file (unterminated `VEVENT`) is detected, passed through untouched, and
   flagged to the user — rather than having a property injected at the wrong offset.
 
@@ -156,6 +159,19 @@ Verified against four real exports — `Schedule` (288 events), `My Calendars` (
 `Class Events` (0), and `School Calendars` (1,735 events with 40 folded lines,
 `LOCATION` on 1,302 and `DESCRIPTION` on 61) — plus synthetic empty and single-event feeds.
 **204 + 93 + 50 checks, all passing.**
+
+### Deleting a previous import
+
+Because UIDs are regenerated (below), re-importing without deleting the old set guarantees
+duplicates — and Outlook has no "undo this import" command. The stamp exists to make deletion a
+single selection:
+
+1. Calendar → **View** → **Change View** → **List** — turns the calendar into a sortable table
+2. Sort by **Categories**, or search the stamp (`MyRJ Import 2026-08`)
+3. Select the block, **Delete**, then switch back to **Calendar** view
+
+Step 2 is the part nobody knows about, and it's what makes this tractable. The page carries these
+steps inline, with the live stamp value filled in after cleaning.
 
 ### Finding: Blackbaud regenerates UIDs on every export
 
