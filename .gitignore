@@ -1,0 +1,6 @@
+node_modules/
+shots/
+package-lock.json
+package.json
+Schedule.ics
+*.local.ics

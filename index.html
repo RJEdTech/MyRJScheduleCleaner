@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyRJ Schedule Cleaner</title>
+<meta name="description" content="Fix a MyRJ calendar export so you can import your teaching schedule into Outlook without being marked busy all day, every school day. Runs entirely in your browser.">
+<meta name="theme-color" content="#C11430">
+<style>
+/* ====================================================================
+   RJ Ed Tech design system — matches Raider Quiz Builder.
+   Neutral greys + Raider Red. No third hue: state is carried by a
+   left rule, weight and mono labels, never by a success/error colour.
+   ==================================================================== */
+:root{
+  --bg:#ffffff; --bg-elev:#fafafa; --bg-card:#f3f3f3; --bg-hover:#ededed;
+  --raider:#C11430; --raider-hot:#a0102a; --raider-tint:rgba(193,20,48,.08);
+  --text:#1a1a1a; --text-mute:#595959; --text-dim:#999999;
+  --border:#e5e5e5; --border-strong:#c5c5c5;
+  --shadow:0 1px 2px rgba(0,0,0,.06);
+  --watermark-opacity:.05;
+}
+[data-theme="dark"]{
+  --bg:#0a0a0a; --bg-elev:#161616; --bg-card:#1c1c1c; --bg-hover:#222222;
+  --raider:#C11430; --raider-hot:#e0223f; --raider-tint:rgba(193,20,48,.15);
+  --text:#ffffff; --text-mute:#a0a0a0; --text-dim:#666666;
+  --border:#2a2a2a; --border-strong:#3a3a3a;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+  --watermark-opacity:.04;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:1rem;line-height:1.6;-webkit-font-smoothing:antialiased;
+  position:relative;transition:background .3s,color .3s;
+}
+.watermark{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-repeat:no-repeat;background-position:center;background-attachment:fixed;
+  background-size:min(60vh,460px) auto;opacity:var(--watermark-opacity)}
+.wrap{max-width:880px;margin:0 auto;padding:0 2rem;position:relative;z-index:1}
+@media(max-width:600px){.wrap{padding:0 1.1rem}}
+a{color:var(--raider);text-decoration:none;border-bottom:1px solid var(--raider-tint)}
+a:hover{border-bottom-color:var(--raider)}
+p{margin:.1em 0 .8em}
+ol,ul{padding-left:1.2em;margin:.3em 0 .9em}
+li{margin:.35em 0}
+b,strong{font-weight:600;color:var(--text)}
+
+/* ---------- header ---------- */
+.site-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:1.3rem 0 1rem;border-bottom:1px solid var(--border)}
+.header-left{display:flex;align-items:center;gap:.9rem;min-width:0}
+.rj-mark{height:42px;width:auto;display:block;flex-shrink:0}
+.header-text{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.brand{font-size:1.35rem;font-weight:600;color:var(--text);line-height:1.15}
+.brand .accent{color:var(--raider)}
+.tagline{color:var(--text-mute);font-size:.9rem;line-height:1.4}
+.theme-toggle{background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  width:36px;height:36px;border-radius:3px;cursor:pointer;display:inline-flex;
+  align-items:center;justify-content:center;transition:all .15s;flex:none}
+.theme-toggle:hover{border-color:var(--raider);color:var(--raider)}
+.theme-toggle svg{width:18px;height:18px}
+.theme-toggle .icon-sun{display:none}
+[data-theme="dark"] .theme-toggle .icon-sun{display:block}
+[data-theme="dark"] .theme-toggle .icon-moon{display:none}
+
+/* ---------- shared label style ---------- */
+.label{font-family:"IBM Plex Mono","Consolas","Courier New",monospace;
+  font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-dim)}
+
+/* ---------- workflow overview ---------- */
+.workflow{margin:2rem 0 .5rem}
+.workflow-steps{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;
+  align-items:start;gap:.6rem;margin-top:.9rem}
+.workflow-step{text-align:center;padding:0 .3rem}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--raider);color:#fff;
+  font-size:.85rem;font-weight:600;display:flex;align-items:center;justify-content:center;
+  margin:0 auto .55rem}
+.workflow-label{font-family:"IBM Plex Mono","Consolas","Courier New",monospace;
+  font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-dim);margin-bottom:.3rem}
+.workflow-step p{font-size:.88rem;color:var(--text-mute);margin:0;line-height:1.45}
+.workflow-arrow{color:var(--border-strong);font-size:1.1rem;padding-top:.35rem}
+@media(max-width:640px){
+  .workflow-steps{grid-template-columns:1fr;gap:1.1rem}
+  .workflow-arrow{display:none}
+  .workflow-step{text-align:left;display:grid;grid-template-columns:28px 1fr;
+    gap:.75rem;align-items:start;padding:0}
+  .step-num{margin:0}
+  .workflow-step>div:last-child{grid-column:2}
+}
+
+/* ---------- panels / step cards ---------- */
+.panel{background:var(--bg-elev);border:1px solid var(--border);border-radius:3px;
+  padding:1.25rem 1.4rem;margin:1rem 0}
+.step-card{background:var(--bg-elev);border:1px solid var(--border);border-radius:3px;
+  border-left:3px solid var(--border);padding:1.15rem 1.4rem 1.3rem;margin:1rem 0;
+  transition:border-color .2s}
+.step-card.active{border-left-color:var(--raider)}
+.step-card.done{border-left-color:var(--text-dim)}
+.step-head{display:flex;align-items:center;gap:.7rem;margin-bottom:.15rem}
+.step-badge{width:26px;height:26px;border-radius:50%;background:var(--raider);color:#fff;
+  font-family:"IBM Plex Mono","Consolas","Courier New",monospace;
+  font-size:.8rem;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none}
+.step-card.done .step-badge{background:transparent;color:var(--text-dim);
+  border:1px solid var(--border-strong)}
+.step-title{font-size:1.05rem;font-weight:600;color:var(--text);line-height:1.3}
+.step-sub{color:var(--text-mute);font-size:.88rem;margin:.15rem 0 .9rem 2.2rem}
+.step-body{margin-left:2.2rem}
+@media(max-width:600px){.step-body,.step-sub{margin-left:0}}
+
+/* ---------- buttons ---------- */
+.btn{background:var(--raider);color:#fff;border:none;border-radius:3px;
+  padding:.8rem 1.7rem;font-family:inherit;font-size:1rem;font-weight:500;
+  cursor:pointer;margin:.9rem .55rem 0 0;transition:background .15s,border-color .15s,color .15s}
+.btn:hover{background:var(--raider-hot)}
+.btn:focus-visible{outline:2px solid var(--raider);outline-offset:2px}
+.btn.secondary{background:transparent;border:1px solid var(--border-strong);color:var(--text-mute)}
+.btn.secondary:hover{background:transparent;border-color:var(--raider);color:var(--raider)}
+.btn:disabled{background:var(--bg-card);color:var(--text-dim);cursor:not-allowed}
+
+/* ---------- inputs ---------- */
+input[type=text]{width:100%;padding:.75rem .9rem;border:1px solid var(--border-strong);
+  border-radius:3px;background:var(--bg);color:var(--text);
+  font-family:"IBM Plex Mono","Consolas","Courier New",monospace;font-size:.85rem;
+  transition:border-color .15s}
+input[type=text]:focus{outline:none;border-color:var(--raider)}
+input[type=text]::placeholder{color:var(--text-dim)}
+
+.dropzone{border:2px dashed var(--border-strong);border-radius:3px;background:var(--bg-card);
+  padding:2rem 1.2rem;text-align:center;color:var(--text-mute);cursor:pointer;
+  transition:.15s;margin-top:1rem}
+.dropzone:hover,.dropzone.over{border-color:var(--raider);background:var(--raider-tint);color:var(--text)}
+.dropzone .dz-head{display:block;color:var(--text);font-size:1rem;margin-bottom:.3rem;font-weight:600}
+.dropzone b{color:var(--text);font-weight:600}
+
+/* ---------- validation / messages ----------
+   House pattern: a left rule carries the state. Error is the only
+   thing that gets Raider Red; success and warning use text weights. */
+.validation{background:var(--bg-elev);border:1px solid var(--border);border-radius:3px;
+  border-left:3px solid var(--border);padding:.85rem 1rem;margin:1rem 0 0;font-size:.92rem;line-height:1.55}
+.validation .vh{display:block;font-family:"IBM Plex Mono","Consolas","Courier New",monospace;
+  font-size:.68rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--text-dim);margin-bottom:.4rem}
+.validation.success{border-left-color:var(--text)}
+.validation.success .vh{color:var(--text)}
+.validation.warning{border-left-color:var(--text-mute)}
+.validation.warning .vh{color:var(--text-mute)}
+.validation.error{border-left-color:var(--raider)}
+.validation.error .vh{color:var(--raider)}
+.validation.pending{border-left-color:var(--text-dim)}
+.validation p{margin:0 0 .55em}
+.validation p:last-child{margin-bottom:0}
+
+/* ---------- stat tiles ---------- */
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.7rem;margin:.2rem 0 1.2rem}
+@media(max-width:560px){.stats{grid-template-columns:1fr}}
+.stat{background:var(--bg-card);border:1px solid var(--border);border-radius:3px;
+  border-left:3px solid var(--border);padding:.85rem 1rem}
+.stat .v{font-family:"IBM Plex Mono","Consolas","Courier New",monospace;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+  font-size:1.75rem;font-weight:600;line-height:1.05;color:var(--text);letter-spacing:-.02em}
+.stat .l{font-family:"IBM Plex Mono","Consolas","Courier New",monospace;
+  font-size:.66rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-dim);margin-top:.45rem;line-height:1.45}
+.stat.flag{border-left-color:var(--raider)}
+.stat.flag .l{color:var(--raider)}
+
+/* ---------- options ---------- */
+label.opt{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;
+  border-left:3px solid var(--border);padding:.85rem 1rem;margin-bottom:.65rem;cursor:pointer;
+  transition:border-color .15s}
+label.opt:hover{border-color:var(--border-strong)}
+label.opt input{margin-right:.55rem;accent-color:#C11430}
+label.opt .t{font-weight:600;color:var(--text)}
+label.opt .d{display:block;margin:.3rem 0 0 1.5rem;color:var(--text-mute);
+  font-size:.88rem;line-height:1.5}
+label.opt .rec{font-family:"IBM Plex Mono","Consolas","Courier New",monospace;
+  font-size:.62rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--raider);background:var(--raider-tint);padding:.15rem .4rem;border-radius:3px;margin-left:.5rem}
+
+/* ---------- tables / details ---------- */
+details{margin:.65rem 0}
+summary{cursor:pointer;font-size:.9rem;color:var(--text-mute);font-weight:600;padding:.3rem 0}
+summary:hover{color:var(--raider)}
+.scroll{max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:3px;margin-top:.4rem}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{text-align:left;padding:.5rem .8rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+th{font-family:"IBM Plex Mono","Consolas","Courier New",monospace;font-size:.66rem;
+  font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);
+  position:sticky;top:0;background:var(--bg-elev)}
+td{color:var(--text-mute)}
+td.n{text-align:right;width:74px;color:var(--text);
+  font-family:"IBM Plex Mono","Consolas","Courier New",monospace;font-variant-numeric:tabular-nums}
+code{font-family:"IBM Plex Mono","Consolas","Courier New",monospace;font-size:.85em;
+  background:var(--bg-card);border:1px solid var(--border);padding:.1rem .35rem;
+  border-radius:3px;word-break:break-all;color:var(--text)}
+
+/* ---------- disclosure card ---------- */
+.disclose{background:var(--bg-elev);border:1px solid var(--border);border-radius:3px;margin:1rem 0}
+.disclose>summary{padding:.9rem 1.2rem;font-size:.98rem;color:var(--text);font-weight:600;
+  list-style:none;display:flex;align-items:center;gap:.6rem}
+.disclose>summary::-webkit-details-marker{display:none}
+.disclose>summary::before{content:"+";font-family:"IBM Plex Mono","Consolas","Courier New",monospace;
+  color:var(--raider);font-weight:600}
+.disclose[open]>summary::before{content:"\2212"}
+.disclose .dbody{padding:0 1.2rem 1.1rem;color:var(--text-mute);font-size:.94rem;border-top:1px solid var(--border);margin-top:0;padding-top:.9rem}
+
+/* ---------- footer ---------- */
+.site-footer{border-top:1px solid var(--border);margin-top:2.5rem;padding:1.5rem 0 2.2rem;
+  text-align:center;font-size:.85rem;color:var(--text-dim);line-height:1.8}
+.site-footer a{color:var(--text-dim);border-bottom:1px solid var(--border)}
+.site-footer a:hover{color:var(--raider);border-color:var(--raider)}
+.site-footer .stamp{font-family:"IBM Plex Mono","Consolas","Courier New",monospace;
+  font-size:.72rem;letter-spacing:.06em;text-transform:uppercase}
+.hidden{display:none}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.05ms!important;scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="watermark" id="watermark" aria-hidden="true"></div>
+
+<div class="wrap">
+  <header class="site-header">
+    <div class="header-left">
+      <img class="rj-mark" id="crest" alt="Regis Jesuit">
+      <div class="header-text">
+        <div class="brand">MyRJ Schedule <span class="accent">Cleaner</span></div>
+        <div class="tagline">Import your teaching schedule without looking busy all day</div>
+      </div>
+    </div>
+    <button class="theme-toggle" id="theme" type="button" aria-label="Toggle dark mode">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    </button>
+  </header>
+</div>
+
+<main class="wrap">
+
+  <!-- workflow overview -->
+  <section class="workflow">
+    <div class="label">How this works</div>
+    <div class="workflow-steps">
+      <div class="workflow-step">
+        <div class="step-num">1</div>
+        <div>
+          <div class="workflow-label">Export</div>
+          <p>Copy your Schedule feed link from MyRJ and download the .ics file</p>
+        </div>
+      </div>
+      <div class="workflow-arrow">&rarr;</div>
+      <div class="workflow-step">
+        <div class="step-num">2</div>
+        <div>
+          <div class="workflow-label">Clean here</div>
+          <p>Drop it in. All-day markers are tagged free; class blocks are untouched</p>
+        </div>
+      </div>
+      <div class="workflow-arrow">&rarr;</div>
+      <div class="workflow-step">
+        <div class="step-num">3</div>
+        <div>
+          <div class="workflow-label">Import</div>
+          <p>Upload the cleaned file into your own Outlook calendar</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <details class="disclose">
+    <summary>Why this exists</summary>
+    <div class="dbody">
+      <p>Your MyRJ calendar feed contains two kinds of events: your <b>timed</b> class blocks, and <b>all-day</b> markers like &ldquo;White Day&rdquo; and &ldquo;Red Day &mdash; One-Hour Late Start.&rdquo;</p>
+      <p>The feed never states whether those all-day markers should count as busy time. When a calendar file leaves that out, the iCalendar standard says to assume busy &mdash; so Outlook marks you unavailable from midnight to midnight on every school day. Colleagues checking your availability see a solid wall, and Scheduling Assistant stops being useful to anyone trying to book you.</p>
+      <p>This page adds the one missing line to those all-day events so they still display but no longer block your time. Nothing else is touched &mdash; not your class blocks, not the timezone rules, not the event IDs.</p>
+      <p><b>Your data never leaves this computer.</b> The file is processed in your browser. Nothing is uploaded, stored, or transmitted &mdash; you can disconnect from the internet and this page still works.</p>
+    </div>
+  </details>
+
+  <!-- STEP 1 -->
+  <section class="step-card active" id="s1">
+    <div class="step-head"><span class="step-badge" id="b1">1</span><span class="step-title">Get your feed link from MyRJ</span></div>
+    <div class="step-body">
+      <ol>
+        <li>Open <a href="https://regisjesuit.myschoolapp.com/app/faculty?svcid=edu#calendar" target="_blank" rel="noopener">MyRJ &rarr; Calendar</a></li>
+        <li>Click the <b>feed icon</b> at the top right of the calendar &mdash; small radiating waves, just left of the printer</li>
+        <li>Under <b>My Calendars</b>, expand <b>Individual Filter Feeds</b></li>
+        <li><b>Right-click</b> the <b>Schedule</b> link and choose <b>Copy link</b></li>
+      </ol>
+      <div class="validation warning">
+        <span class="vh">Right-click, don't left-click</span>
+        Left-clicking hands the link to Windows, which asks which app should open it and then passes a broken version to Outlook &mdash; that's the &ldquo;Invalid URL&rdquo; error.
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step-card" id="s2">
+    <div class="step-head"><span class="step-badge" id="b2">2</span><span class="step-title">Load your calendar file</span></div>
+    <p class="step-sub">Paste the link to download your file, then drop it below.</p>
+    <div class="step-body">
+      <input type="text" id="url" aria-label="MyRJ feed link" placeholder="webcal://regisjesuit.myschoolapp.com/podium/feed/iCal.aspx?z=..." autocomplete="off" spellcheck="false">
+      <button class="btn" id="btnFetch" type="button">Get my file</button>
+      <button class="btn secondary" id="btnSkip" type="button">I already have the file</button>
+      <div id="urlMsg"></div>
+
+      <div id="dropArea" class="hidden">
+        <div class="dropzone" id="drop" tabindex="0" role="button">
+          <span class="dz-head">Drop your .ics file here</span>
+          or click to browse &mdash; look in <b>Downloads</b> for the newest <code>.ics</code>
+        </div>
+        <input type="file" id="file" accept=".ics,text/calendar" style="display:none">
+      </div>
+      <div id="fileMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step-card hidden" id="s3">
+    <div class="step-head"><span class="step-badge" id="b3">3</span><span class="step-title">Choose what to do with the all-day events</span></div>
+    <div class="step-body">
+      <div class="stats" id="stats"></div>
+
+      <div id="modes">
+        <label class="opt">
+          <input type="radio" name="mode" value="free" checked>
+          <span class="t">Keep them, but stop them blocking my time</span><span class="rec">Recommended</span>
+          <span class="d">Red and White days still appear in your calendar and on your phone. They just no longer make you look busy. Nothing is thrown away.</span>
+        </label>
+        <label class="opt">
+          <input type="radio" name="mode" value="strip">
+          <span class="t">Remove them entirely</span>
+          <span class="d">Only your timed class blocks come through. Choose this if you already subscribe to the Red Day and White Day calendars separately and don't want them twice.</span>
+        </label>
+      </div>
+
+      <details><summary id="adSummary">See the all-day events</summary>
+        <div class="scroll"><table id="adTable"></table></div></details>
+      <details><summary id="tdSummary">See the timed events being kept</summary>
+        <div class="scroll"><table id="tdTable"></table></div></details>
+
+      <button class="btn" id="btnRun" type="button">Clean my file</button>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step-card hidden" id="s4">
+    <div class="step-head"><span class="step-badge" id="b4">4</span><span class="step-title">Download and import</span></div>
+    <div class="step-body">
+      <div id="result"></div>
+      <button class="btn" id="btnDl" type="button">Download cleaned file</button>
+
+      <p style="margin-top:1.2rem"><b>Then, in Outlook:</b></p>
+      <ol>
+        <li><b>Add calendar</b> &rarr; <b>Upload from file</b></li>
+        <li>Browse to the file you just downloaded</li>
+        <li>Set <b>Add to</b> &rarr; <b>Calendar</b> &mdash; your own calendar, not a new one</li>
+        <li><b>Add to calendar</b></li>
+      </ol>
+
+      <div class="validation error">
+        <span class="vh">Read this before you rely on it</span>
+        <p><b>This is a snapshot, not a subscription &mdash; so keep your subscribed calendar too.</b></p>
+        <p>These events are now yours. They block your time and reach your phone. But they are frozen as of today. When the Academic Office changes something in MyRJ &mdash; a special schedule, or a one-hour late start called at 5:30am for weather &mdash; that change will <b>never</b> reach this imported copy. On a delay morning it won't just be out of date; it will be showing block times that are no longer real.</p>
+        <p>Subscribe to the same feed as well (<b>Add calendar &rarr; Subscribe from web</b>) and keep it visible. The import is what makes you look busy to colleagues; the subscription is what tells you the truth. <b>When they disagree, the subscribed one is right.</b></p>
+      </div>
+
+      <div class="validation warning">
+        <span class="vh">Each semester</span>
+        Run this again, and <b>delete the previous imported set first</b>. Outlook does not reliably match re-imported events to the ones already there, so importing over the top leaves you with two of everything.
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="wrap">
+  <footer class="site-footer">
+    <span class="stamp">MyRJ Schedule Cleaner &middot; v1.0 &middot; 2026-08</span><br>
+    Regis Jesuit &middot; Educational Technology &mdash; runs entirely in your browser, with no uploads, no storage and no external requests &middot;
+    <a href="mailto:jbeyer@regisjesuit.com?subject=MyRJ%20Schedule%20Cleaner%20feedback">Report a problem</a>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ====================================================================
+   MyRJ Schedule Cleaner — Regis Jesuit Ed Tech
+   --------------------------------------------------------------------
+   Pure logic first, DOM wiring last. Everything above init() is free of
+   browser dependencies so a test harness can exercise the shipped code
+   directly against a real export.
+   ES5-compatible on purpose: school machines, mixed browser versions.
+   ==================================================================== */
+
+/* ---------- ICS parsing ----------------------------------------------
+   Deliberately conservative: we never rewrite the whole file. It is
+   tokenised into an ordered list of items — each either a raw
+   passthrough line or a complete VEVENT block — and reassembled in the
+   same order. VTIMEZONE, PRODID and every unknown property survive
+   byte-for-byte, and nothing is ever moved.
+   -------------------------------------------------------------------- */
+function parseIcs(text){
+  text = text.replace(/^\uFEFF/, "");            // strip BOM if present
+  var lines = text.split(/\r\n|\n|\r/);
+  var items = [], events = [], cur = null;
+
+  for(var i=0;i<lines.length;i++){
+    var ln = lines[i];
+    if(cur === null && /^BEGIN:VEVENT\s*$/i.test(ln)){ cur = [ln]; continue; }
+    if(cur !== null){
+      cur.push(ln);
+      if(/^END:VEVENT\s*$/i.test(ln)){
+        var ev = { kind:"event", lines:cur, closed:true,
+                   allDay:isAllDay(cur), summary:getSummary(cur), date:getDate(cur) };
+        items.push(ev); events.push(ev);
+        cur = null;
+      }
+      continue;
+    }
+    items.push({kind:"raw", line:ln});
+  }
+  /* An unterminated block means a truncated file. Keep the bytes, but
+     mark it so the transform refuses to inject anything into it. */
+  if(cur !== null){
+    var ev2 = { kind:"event", lines:cur, closed:false,
+                allDay:isAllDay(cur), summary:getSummary(cur), date:getDate(cur) };
+    items.push(ev2); events.push(ev2);
+  }
+  return { items: items, events: events, truncated: (cur !== null) };
+}
+
+/* All-day events use a DATE value with no time component:
+     DTSTART;VALUE=DATE:20260820
+   Timed events carry a time (and usually a TZID):
+     DTSTART;TZID=America/Denver:20260820T133000                        */
+function isAllDay(block){
+  for(var i=0;i<block.length;i++){
+    var m = /^DTSTART([^:]*):(.*)$/i.exec(block[i]);
+    if(m){
+      if(/VALUE=DATE(?!-TIME)/i.test(m[1])) return true;
+      return !/T\d{6}/.test(m[2]);                // fallback: no time portion
+    }
+  }
+  return false;
+}
+
+/* Read a property value, following RFC 5545 line folding (continuation
+   lines begin with a space or tab). Reading only — we never re-fold on
+   write, and we only ever insert short lines.                          */
+function getFolded(block, prop){
+  var re = new RegExp("^"+prop+"[;:]", "i");
+  for(var i=0;i<block.length;i++){
+    if(re.test(block[i])){
+      var v = block[i].slice(block[i].indexOf(":")+1);
+      for(var j=i+1;j<block.length && /^[ \t]/.test(block[j]); j++) v += block[j].slice(1);
+      return v.replace(/\\n/gi,"\n").replace(/\\,/g,",").replace(/\\;/g,";").replace(/\\\\/g,"\\");
+    }
+  }
+  return "";
+}
+function getSummary(block){ return getFolded(block,"SUMMARY") || "(no title)"; }
+function getDate(block){
+  var raw = getFolded(block,"DTSTART");
+  var m = /(\d{4})(\d{2})(\d{2})/.exec(raw);
+  return m ? (m[2]+"/"+m[3]+"/"+m[1].slice(2)) : "";
+}
+
+/* ---------- transform ------------------------------------------------
+   Mode "free"  : add TRANSP:TRANSPARENT + X-MICROSOFT-CDO-BUSYSTATUS:FREE
+                  to all-day events only. Timed events are untouched —
+                  default-opaque is exactly right for a class block.
+   Mode "strip" : drop all-day events entirely.
+   Idempotent: a property already present is never added twice.
+   -------------------------------------------------------------------- */
+function buildCleaned(doc, mode){
+  var out = [];
+  var changed = 0, already = 0, removed = 0, timedKept = 0, allDayKept = 0, skipped = 0;
+
+  for(var i=0;i<doc.items.length;i++){
+    var it = doc.items[i];
+    if(it.kind === "raw"){ out.push(it.line); continue; }
+    if(!it.allDay){ timedKept++; pushAll(out, it.lines); continue; }
+    if(mode === "strip"){ removed++; continue; }
+    allDayKept++;
+
+    /* Locate END:VEVENT. If the block was never terminated the file is
+       truncated; pass it through untouched rather than guessing where a
+       property belongs. */
+    var lines = it.lines, at = -1;
+    for(var j=lines.length-1;j>=1;j--){
+      if(/^END:VEVENT\s*$/i.test(lines[j])){ at = j; break; }
+    }
+    if(at < 1){ skipped++; pushAll(out, lines); continue; }
+
+    var hasTransp = false, hasCdo = false;
+    for(var k=0;k<lines.length;k++){
+      if(/^TRANSP[;:]/i.test(lines[k])) hasTransp = true;
+      if(/^X-MICROSOFT-CDO-BUSYSTATUS[;:]/i.test(lines[k])) hasCdo = true;
+    }
+
+    pushAll(out, lines.slice(0, at));
+    if(!hasTransp) out.push("TRANSP:TRANSPARENT");              // the standard property
+    if(!hasCdo)    out.push("X-MICROSOFT-CDO-BUSYSTATUS:FREE");  // what Outlook actually reads
+    pushAll(out, lines.slice(at));
+
+    if(!hasTransp || !hasCdo) changed++; else already++;
+  }
+
+  /* Normalise line endings to CRLF — required by RFC 5545, and Outlook
+     is fussier about it than the spec is. Trim trailing blank lines so
+     re-running the tool can't grow the file by one line each pass. */
+  while(out.length && out[out.length-1] === "") out.pop();
+  var text = out.join("\r\n") + "\r\n";
+
+  return { text:text, changed:changed, already:already, removed:removed,
+           timedKept:timedKept, allDayKept:allDayKept, skipped:skipped };
+}
+function pushAll(target, arr){ for(var i=0;i<arr.length;i++) target.push(arr[i]); }
+
+/* Normalise a webcal:// or scheme-less URL to https:// */
+function normalizeUrl(u){
+  u = (u||"").trim().replace(/^["']|["']$/g,"");
+  if(!u) return "";
+  if(/^webcal:\/\//i.test(u))  return u.replace(/^webcal:\/\//i, "https://");
+  if(/^http:\/\//i.test(u))    return u.replace(/^http:\/\//i, "https://");
+  if(/^\/\//.test(u))          return "https:" + u;
+  if(!/^https:\/\//i.test(u))  return "https://" + u.replace(/^\/+/, "");
+  return u;
+}
+
+/* Group events by title, most frequent first. */
+function tally(list){
+  var m = {}, order = [];
+  for(var i=0;i<list.length;i++){
+    var s = list[i].summary;
+    if(!Object.prototype.hasOwnProperty.call(m,s)){ m[s]=0; order.push(s); }
+    m[s]++;
+  }
+  return order.map(function(k){ return [k, m[k]]; })
+              .sort(function(a,b){ return b[1]-a[1] || a[0].localeCompare(b[0]); });
+}
+
+/* ==================== DOM wiring ==================== */
+function init(){
+
+  /* Crimson crest, inline SVG data URI — no external asset. */
+  var CREST = "data:image/svg+xml;utf8," + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 68"><path d="M30 2 4 11v24c0 16 12 27 26 31 14-4 26-15 26-31V11L30 2z" fill="none" stroke="%23C11430" stroke-width="4"/><text x="30" y="42" font-family="Georgia,serif" font-size="24" font-weight="700" fill="%23C11430" text-anchor="middle">RJ</text></svg>');
+  document.getElementById("crest").src = CREST;
+  document.getElementById("watermark").style.backgroundImage = "url('" + CREST + "')";
+
+  var parsed = null, cleanedText = null, outName = "MyRJ-Schedule-clean.ics";
+
+  function $(id){ return document.getElementById(id); }
+  function show(el){ el.classList.remove("hidden"); }
+  function hide(el){ el.classList.add("hidden"); }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];
+    });
+  }
+  function activate(el){ el.classList.remove("done"); el.classList.add("active"); }
+  function done(el){
+    el.classList.remove("active"); el.classList.add("done");
+    var b = el.querySelector(".step-badge");
+    if(b) b.innerHTML = "&#10003;";
+  }
+  function msg(el, cls, head, html){
+    el.innerHTML = '<div class="validation '+cls+'">' +
+      (head ? '<span class="vh">'+head+'</span>' : '') + html + '</div>';
+  }
+  function clear(el){ el.innerHTML = ""; }
+
+  function fillTable(el, rows){
+    var html = "<tr><th>Event</th><th class='n'>Count</th></tr>";
+    for(var i=0;i<rows.length;i++){
+      html += "<tr><td>"+esc(rows[i][0])+"</td><td class='n'>"+rows[i][1]+"</td></tr>";
+    }
+    el.innerHTML = html;
+  }
+
+  function loadText(text, sourceName){
+    try{ parsed = parseIcs(text); }
+    catch(e){
+      msg($("fileMsg"), "error", "Couldn't read that file",
+        "Is it the .ics you downloaded from MyRJ?");
+      return;
+    }
+    if(!/BEGIN:VCALENDAR/i.test(text) || !parsed.events.length){
+      msg($("fileMsg"), "error", "No calendar events in that file",
+        "Make sure you downloaded the feed itself rather than saving the web page.");
+      return;
+    }
+
+    var ad = [], td = [];
+    for(var i=0;i<parsed.events.length;i++){
+      (parsed.events[i].allDay ? ad : td).push(parsed.events[i]);
+    }
+    if(sourceName) outName = sourceName.replace(/\.ics$/i,"") + "-clean.ics";
+
+    $("stats").innerHTML =
+      '<div class="stat"><div class="v">'+parsed.events.length+'</div><div class="l">Events in file</div></div>'+
+      '<div class="stat"><div class="v">'+td.length+'</div><div class="l">Timed &mdash; will block time</div></div>'+
+      '<div class="stat flag"><div class="v">'+ad.length+'</div><div class="l">All-day &mdash; the problem</div></div>';
+
+    fillTable($("adTable"), tally(ad));
+    fillTable($("tdTable"), tally(td));
+    $("adSummary").textContent = "See the "+ad.length+" all-day events";
+    $("tdSummary").textContent = "See the "+td.length+" timed events being kept";
+
+    if(parsed.truncated){
+      msg($("fileMsg"),"warning","File looks incomplete",
+        "The last event has no closing line, which usually means the download was cut short. "+
+        "It will be passed through untouched &mdash; re-download the file if anything looks wrong.");
+    }else if(!ad.length){
+      msg($("fileMsg"),"success","Nothing to fix",
+        "This file has no all-day events, so nothing is blocking your time. You can import it into Outlook as it is.");
+    }else{
+      msg($("fileMsg"),"success","Loaded",
+        "<b>"+parsed.events.length+" events</b> read. <b>"+ad.length+
+        "</b> of them are all-day events that would mark you busy for the whole day.");
+    }
+
+    if(!ad.length){ hide($("modes")); $("btnRun").textContent = "Prepare my file anyway"; }
+    else{ show($("modes")); $("btnRun").textContent = "Clean my file"; }
+
+    done($("s1")); done($("s2"));
+    show($("s3")); activate($("s3"));
+    $("s3").scrollIntoView({behavior:"smooth", block:"start"});
+  }
+
+  function readFile(f){
+    var r = new FileReader();
+    r.onload  = function(){ loadText(String(r.result), f.name); };
+    r.onerror = function(){ msg($("fileMsg"),"error","Couldn't open that file",
+      "Try dragging it again, or use the browse option."); };
+    r.readAsText(f);
+  }
+
+  /* --- step 2: URL --- */
+  $("btnFetch").addEventListener("click", function(){
+    var u = normalizeUrl($("url").value);
+    if(!u || !/myschoolapp\.com/i.test(u)){
+      msg($("urlMsg"),"error","That doesn't look like a MyRJ feed link",
+        "It should contain <code>myschoolapp.com</code>. Copy it again from the feed icon in MyRJ.");
+      return;
+    }
+    msg($("urlMsg"),"pending","Working","Trying to read the feed directly&hellip;");
+
+    /* Attempt a direct read. MyRJ almost certainly refuses cross-origin
+       requests, in which case we fall back to a plain download link,
+       which is not subject to the same restriction. We deliberately do
+       not route through any proxy: the feed URL is an unauthenticated
+       key to the whole of someone's schedule. */
+    if(typeof fetch !== "function"){ fallback(u); return; }
+    fetch(u, {mode:"cors"})
+      .then(function(r){ if(!r.ok) throw new Error(String(r.status)); return r.text(); })
+      .then(function(t){
+        if(!/BEGIN:VCALENDAR/i.test(t)) throw new Error("not ics");
+        msg($("urlMsg"),"success","Read your feed directly","No download needed.");
+        loadText(t, "MyRJ-Schedule");
+      })
+      .catch(function(){ fallback(u); });
+  });
+
+  function fallback(u){
+    msg($("urlMsg"),"pending","One extra step",
+      "<p>Your browser won't let this page read the MyRJ feed directly &mdash; a security rule. "+
+      "The usual workaround means sending your calendar link to a third-party server, and a feed link is a key to your whole schedule, so this tool doesn't do that.</p>"+
+      '<p><a href="'+esc(u)+'" download="MyRJ-Schedule.ics" target="_blank" rel="noopener"><b>Download your file &rarr;</b></a> '+
+      'then drop it below. Your browser picks the filename &mdash; look for the newest <code>.ics</code> in Downloads.</p>');
+    show($("dropArea"));
+    $("dropArea").scrollIntoView({behavior:"smooth", block:"center"});
+  }
+
+  $("btnSkip").addEventListener("click", function(){
+    clear($("urlMsg"));
+    show($("dropArea"));
+    $("dropArea").scrollIntoView({behavior:"smooth", block:"center"});
+  });
+
+  /* --- step 2: file --- */
+  var drop = $("drop"), fileInput = $("file");
+  drop.addEventListener("click", function(){ fileInput.click(); });
+  drop.addEventListener("keydown", function(e){
+    if(e.key === "Enter" || e.key === " "){ e.preventDefault(); fileInput.click(); }
+  });
+  drop.addEventListener("dragover", function(e){ e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", function(){ drop.classList.remove("over"); });
+  drop.addEventListener("drop", function(e){
+    e.preventDefault(); drop.classList.remove("over");
+    if(e.dataTransfer && e.dataTransfer.files.length) readFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener("change", function(){
+    if(fileInput.files.length) readFile(fileInput.files[0]);
+  });
+
+  /* --- step 3: run --- */
+  $("btnRun").addEventListener("click", function(){
+    var checked = document.querySelector('input[name="mode"]:checked');
+    var mode = checked ? checked.value : "free";
+    var res = buildCleaned(parsed, mode);
+    cleanedText = res.text;
+
+    var body;
+    if(mode === "free"){
+      if(res.changed === 0 && res.allDayKept === 0){
+        body = "<p>Nothing needed changing. <b>"+res.timedKept+"</b> timed events passed through untouched.</p>";
+      }else{
+        body = "<p><b>"+res.changed+" all-day events</b> marked as free. They will still show in your calendar; they just won't block your time.</p>"+
+               "<p><b>"+res.timedKept+" timed events</b> left exactly as they are, so your classes still make you unavailable.</p>";
+        if(res.already) body += "<p>"+res.already+" were already marked free and were left alone.</p>";
+      }
+    }else{
+      body = "<p><b>"+res.removed+" all-day events removed.</b> <b>"+res.timedKept+" timed events</b> kept.</p>";
+    }
+    if(res.skipped) body += "<p>"+res.skipped+" incomplete event(s) were passed through untouched.</p>";
+
+    msg($("result"),"success","Your file is ready", body);
+    done($("s3"));
+    show($("s4")); activate($("s4"));
+    $("s4").scrollIntoView({behavior:"smooth", block:"start"});
+  });
+
+  /* --- step 4: download --- */
+  $("btnDl").addEventListener("click", function(){
+    if(cleanedText === null) return;
+    var blob = new Blob([cleanedText], {type:"text/calendar;charset=utf-8"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = outName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    done($("s4"));
+  });
+
+  $("url").addEventListener("keydown", function(e){
+    if(e.key === "Enter"){ e.preventDefault(); $("btnFetch").click(); }
+  });
+
+  /* --- theme toggle (house behaviour) --- */
+  function setTheme(dark){
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    try{ localStorage.setItem("rj-schedule-cleaner-theme", dark ? "dark" : "light"); }catch(e){}
+  }
+  (function(){
+    var p = null;
+    try{ p = localStorage.getItem("rj-schedule-cleaner-theme"); }catch(e){}
+    setTheme(p ? p === "dark" : true);
+  })();
+  $("theme").addEventListener("click", function(){
+    setTheme(document.documentElement.getAttribute("data-theme") !== "dark");
+  });
+}
+
+if(typeof document !== "undefined") init();
+if(typeof module !== "undefined" && module.exports){
+  module.exports = { parseIcs:parseIcs, buildCleaned:buildCleaned, isAllDay:isAllDay,
+                     getFolded:getFolded, normalizeUrl:normalizeUrl, tally:tally };
+}
+</script>
+</body>
+</html>
