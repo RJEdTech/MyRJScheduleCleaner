@@ -84,6 +84,7 @@ const HTTPSU = WEBCAL.replace(/^webcal/, 'https');
   await page.waitForSelector('#sec4:not(.is-hidden)');
   await page.waitForTimeout(400);
   const resultText = (await page.textContent('#result')).replace(/\s+/g, ' ').trim();
+  const deleteHelp = (await page.textContent('#sec4')).replace(/\s+/g, ' ').trim();
   await page.screenshot({ path: path.join(OUT, '05-light-result.png'), fullPage: true });
 
   const dl = await Promise.all([page.waitForEvent('download'), page.click('#btnDl')]);
@@ -140,6 +141,12 @@ const HTTPSU = WEBCAL.replace(/^webcal/, 'https');
   t('downloaded: VTIMEZONE intact', expTz, (got.match(/^BEGIN:VTIMEZONE/gm) || []).length);
   t('downloaded: folded lines preserved', (src.match(/^[ \t]/gm) || []).length,
     (got.match(/^[ \t]/gm) || []).length);
+  const stampRe = /,MyRJ Import \d{4}-\d{2}$/gm;
+  t('downloaded: import stamp on every event', srcBlocks.length, (got.match(stampRe) || []).length);
+  t('downloaded: event titles untouched', true,
+    (src.match(/^SUMMARY:.*$/gm) || []).join('|') === (got.match(/^SUMMARY:.*$/gm) || []).join('|'));
+  t('page shows the stamp name after cleaning', true, /MyRJ Import \d{4}-\d{2}/.test(deleteHelp));
+  t('page shows the List-view delete steps', true, /Change View/.test(deleteHelp) && /List/.test(deleteHelp));
   t('downloaded: all UIDs preserved', true,
     (src.match(/^UID:.*$/gm) || []).join('|') === (got.match(/^UID:.*$/gm) || []).join('|'));
   t('downloaded: ends with END:VCALENDAR', true, /END:VCALENDAR\r\n$/.test(got));
