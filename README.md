@@ -4,7 +4,7 @@ A single-page browser tool that fixes MyRJ calendar exports so teachers can merg
 teaching schedule into their real Outlook calendar **without being marked busy from
 midnight to midnight on every school day**.
 
-**Live:** https://rjedtech.github.io/MyRJ-Schedule-Cleaner/
+**Live:** https://rjedtech.github.io/MyRJScheduleCleaner/
 
 Part of the RJ Ed Tech family — [Raider Randomizer](https://rjedtech.github.io/Raider-Randomizer/) ·
 [Raider Timer](https://rjedtech.github.io/Raider-Timer/) ·
