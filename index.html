@@ -236,6 +236,36 @@
   .url-row input[type=text]:focus { outline: none; border-color: var(--raider); }
   .url-row input[type=text]::placeholder { color: var(--text-dim); }
 
+  /* ===== MyRJ toolbar mock (shows which icon to click) =====
+     Reproduces the dark toolbar at the top-right of the MyRJ calendar so
+     people can match it by eye. Fixed dark in both themes, because that
+     is what MyRJ actually looks like. All inline SVG — no screenshots,
+     no external images. */
+  .toolbar-hint { margin: 1rem 0 1.5rem; }
+  .toolbar-hint .tb {
+    display: inline-flex; align-items: center; gap: 0.15rem;
+    background: #3a3a3a; border: 1px solid #4a4a4a; border-radius: 3px;
+    padding: 0.3rem 0.35rem;
+  }
+  .toolbar-hint .tb-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem;
+    color: #ffffff; padding: 0.35rem 0.5rem; border-radius: 2px;
+  }
+  .toolbar-hint .tb-btn svg { width: 17px; height: 17px; display: block; }
+  .toolbar-hint .tb-btn.tb-list { font-size: 0.82rem; font-weight: 600; padding-right: 0.6rem; }
+  .toolbar-hint .tb-sep { width: 1px; align-self: stretch; background: #555555; margin: 0.15rem 0.2rem; }
+  .toolbar-hint .tb-target {
+    position: relative;
+    box-shadow: 0 0 0 2px var(--raider);
+    border-radius: 3px;
+  }
+  .toolbar-hint .tb-caption {
+    display: flex; align-items: baseline; gap: 0.4rem;
+    margin-top: 0.6rem; color: var(--text-mute); font-size: 0.88rem;
+  }
+  .toolbar-hint .tb-caption b { color: var(--text); font-weight: 600; }
+  .toolbar-hint .tb-caption .tb-arrow { color: var(--raider); font-weight: 700; }
+
   /* ===== Feed picker ===== */
   .feed-label {
     font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em;
@@ -604,7 +634,36 @@
     <div class="section-h"><div class="step-num" id="num1">1</div><h2>Get your feed link from MyRJ</h2></div>
     <ol>
       <li>Open <a href="https://regisjesuit.myschoolapp.com/app/faculty?svcid=edu#calendar" target="_blank" rel="noopener">MyRJ &rarr; Calendar</a></li>
-      <li>Click the <b>feed icon</b> at the top right of the calendar &mdash; small radiating waves, just left of the printer</li>
+      <li>Click the <b>feed icon</b> at the top right of the calendar &mdash; it looks like this:</li>
+    </ol>
+
+    <div class="toolbar-hint">
+      <div class="tb" aria-hidden="true">
+        <span class="tb-btn tb-list">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          List
+        </span>
+        <span class="tb-sep"></span>
+        <span class="tb-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h13M3 12h13M3 17h9"/><path d="M17 4l4 3-4 3"/></svg>
+        </span>
+        <span class="tb-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h14M3 11h10M3 16h6"/><path d="M18 10v9M15 16l3 3 3-3"/></svg>
+        </span>
+        <span class="tb-btn tb-target">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="5.5" cy="18.5" r="1.7" fill="currentColor" stroke="none"/><path d="M4 11.5a8.5 8.5 0 0 1 8.5 8.5"/><path d="M4 4.5A15.5 15.5 0 0 1 19.5 20"/></svg>
+        </span>
+        <span class="tb-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
+        </span>
+      </div>
+      <div class="tb-caption">
+        <span class="tb-arrow">&uarr;</span>
+        <span>The <b>feed icon</b> &mdash; small radiating waves, immediately left of the printer. Top right of the MyRJ calendar.</span>
+      </div>
+    </div>
+
+    <ol start="3">
       <li>Expand <b>Individual Filter Feeds</b></li>
       <li><b>Right-click</b> the feed you want and choose <b>Copy link</b></li>
     </ol>
