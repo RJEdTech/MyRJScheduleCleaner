@@ -114,24 +114,57 @@ webfont is loaded), `[data-theme="dark"]` toggle with `localStorage` persistence
 - **Feed window is past 2 months + next 12 months.** Changes take up to an hour to reach
   the feed; Outlook refreshes subscriptions every 3–4 hours.
 
+## Which feed to use
+
+MyRJ's feed dialog has two sections. **Use one from `My Calendars`:**
+
+| Feed | Who it's for |
+|---|---|
+| **Schedule** | Your teaching blocks. The one nearly everyone wants. |
+| **Games/Practices** | Coaches |
+| **Group Events** | Group moderators |
+| **Class Events** | Assignment due dates — a poor fit for blocking time, and empty for most people |
+| **My Calendars** (Entire Calendar) | All of the above at once |
+
+**Not `School Calendars`.** That's the separate school-wide section: ~1,735 events, nearly all
+of them other people's games, practices and meetings. The tool warns if it's handed a file with
+more than 600 events.
+
 ## Tests
 
-Both harnesses run against a real 288-event faculty export and exercise the **shipped**
-`index.html` — the acceptance suite extracts and evaluates the actual `<script>` block
-rather than a reimplementation.
+Three harnesses, all exercising the **shipped** `index.html` — the suites extract and evaluate
+the actual `<script>` block rather than a reimplementation.
 
 ```bash
-node test/acceptance.js path/to/Schedule.ics   # 77 checks, no dependencies
-npm install playwright
-node test/e2e.js path/to/Schedule.ics          # 17 checks, real Chromium + real download
+node test/verify.js "School Calendars.ics" Schedule.ics "Class Events.ics"   # any export
+node test/acceptance.js Schedule.ics                                          # spec + design system
+npm install playwright && node test/e2e.js Schedule.ics                       # real browser
 ```
 
-`acceptance.js` covers the transform (both modes), byte-for-byte preservation,
-idempotency across three runs, CRLF and line-length conformance, BOM / LF / CR inputs,
-truncated files, ordering, URL normalisation, and the design-system and
-no-external-request guarantees. `e2e.js` drives the page in a browser, asserts that
-**zero network requests** are attempted, and validates the file the browser actually
-downloads.
+- **`verify.js`** — derives every expectation from an independent scan of whatever file it's
+  given, so it works on any feed. 34 checks per file: transform correctness in both modes,
+  byte-for-byte preservation of timed events and folded lines, `LOCATION`/`DESCRIPTION`/`SUMMARY`
+  counts, UID order, CRLF, 75-octet conformance, idempotency across three runs, and BOM/LF inputs.
+- **`acceptance.js`** — 93 checks: every row of the spec's acceptance table, truncated-file and
+  ordering edge cases, `webcal://` → `https://` conversion, plus assertions that the design system
+  matches Raider Quiz Builder token-for-token and that the page requests nothing external.
+- **`e2e.js`** — 25 checks in real Chromium: pastes a real feed link, verifies the live conversion
+  and clipboard, uploads the export, captures the actual download, and asserts that **zero external
+  requests** are attempted (they're blocked and recorded, not merely observed).
+
+Verified against four real exports — `Schedule` (288 events), `My Calendars` (288),
+`Class Events` (0), and `School Calendars` (1,735 events with 40 folded lines,
+`LOCATION` on 1,302 and `DESCRIPTION` on 61) — plus synthetic empty and single-event feeds.
+**204 + 93 + 50 checks, all passing.**
+
+### Finding: Blackbaud regenerates UIDs on every export
+
+Downloading the same feed twice produces **zero shared UIDs** — same 288 events, same summaries,
+288 completely different `UID` values and a new `DTSTAMP`. This settles a question the build spec
+left contradictory: a re-import can never be matched to a previous import, because there is
+nothing stable to match on. **Deleting the previous imported set before re-importing is mandatory,
+not advisory.** The tool still preserves UIDs exactly as found — it just doesn't pretend they mean
+anything across downloads.
 
 ## Reuse
 
