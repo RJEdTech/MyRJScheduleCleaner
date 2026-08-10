@@ -131,6 +131,34 @@
   }
 
   .lead strong { color: var(--text); font-weight: 500; }
+  .lead-cta { font-size: 0.95rem; }
+
+  /* ===== Before / after contrast ===== */
+  .contrast {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 0 0 1.5rem;
+  }
+  .contrast-col {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: 3px;
+    padding: 0.9rem 1rem;
+  }
+  .contrast-col.after { border-left-color: var(--raider); }
+  .contrast-col .c-head {
+    display: flex; align-items: center; gap: 0.45rem;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text-dim);
+    margin-bottom: 0.45rem;
+  }
+  .contrast-col.after .c-head { color: var(--raider); }
+  .contrast-col .c-head svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .contrast-col .c-line { color: var(--text); font-size: 0.95rem; font-weight: 500; line-height: 1.35; }
+  .contrast-col .c-sub { color: var(--text-mute); font-size: 0.85rem; margin-top: 0.25rem; line-height: 1.45; }
+  @media (max-width: 620px) { .contrast { grid-template-columns: 1fr; } }
   .lead code { background: var(--bg-card); padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
 
   /* ===== Workflow strip (3-step pipeline) ===== */
@@ -265,6 +293,18 @@
   }
   .toolbar-hint .tb-caption b { color: var(--text); font-weight: 600; }
   .toolbar-hint .tb-caption .tb-arrow { color: var(--raider); font-weight: 700; }
+
+  /* ===== MyRJ feed dialog mock (inline SVG, fixed light like the real dialog) ===== */
+  .dialog-mock { margin: 1.5rem 0; }
+  .dialog-mock .dialog-svg {
+    display: block;
+    width: 100%;
+    max-width: 604px;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  }
+  .dialog-mock .tb-caption { max-width: 604px; }
 
   /* ===== Feed picker ===== */
   .feed-label {
@@ -598,7 +638,30 @@
 
 <main>
   <p class="lead">
-    Importing your MyRJ Schedule feed into Outlook marks you <strong>busy from midnight to midnight on every school day</strong>, because the feed never says whether Red and White day markers should count as busy time. Drop your <code>.ics</code> here and it adds the one missing line, so the day markers still show but stop blocking your calendar. <strong>Everything runs in your browser &mdash; nothing is uploaded.</strong>
+    This page cleans up your MyRJ calendar file before you import it into Outlook. Run it through here first and your class blocks come through untouched, while the all-day Red and White day markers still show up without blocking your time. Skip this step and Outlook marks you busy all day, every school day.
+  </p>
+
+  <div class="contrast">
+    <div class="contrast-col before">
+      <div class="c-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+        Import it as-is
+      </div>
+      <div class="c-line">Busy 12:00 AM &ndash; 11:59 PM, every school day</div>
+      <div class="c-sub">Anyone checking your availability sees a solid wall. Scheduling Assistant can't find you a free minute.</div>
+    </div>
+    <div class="contrast-col after">
+      <div class="c-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+        Clean it here first
+      </div>
+      <div class="c-line">Only your actual classes show as busy</div>
+      <div class="c-sub">Red and White day markers still appear at the top of the day &mdash; they just don't block your calendar.</div>
+    </div>
+  </div>
+
+  <p class="lead lead-cta">
+    Start with <a href="#sec1">Step 1</a> below. Already have your <code>.ics</code> file? <a href="#sec2">Skip to the drop zone.</a> Takes about a minute, and <strong>everything runs in your browser &mdash; nothing is uploaded.</strong>
   </p>
 
   <section class="workflow-strip">
@@ -674,9 +737,73 @@
       </div>
     </div>
 
+
+    <figure class="dialog-mock">
+      <svg class="dialog-svg" viewBox="0 0 604 424" role="img" aria-labelledby="feedDialogTitle feedDialogDesc" xmlns="http://www.w3.org/2000/svg">
+      <title id="feedDialogTitle">The WebCal Feed for External Calendar dialog in MyRJ</title>
+      <desc id="feedDialogDesc">A dialog listing your feeds under My Calendars: Entire Calendar, then Individual Filter Feeds with Schedule, Games/Practices, Class Events and Group Events. The Schedule row is highlighted.</desc>
+      <defs>
+        <g id="gear-icon"><circle cx="0" cy="0" r="6.4" fill="none" stroke="#555" stroke-width="2.4"/>
+        <path d="M5.20 0.00L9.00 0.00" stroke="#555" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M3.68 3.68L6.36 6.36" stroke="#555" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M0.00 5.20L0.00 9.00" stroke="#555" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M-3.68 3.68L-6.36 6.36" stroke="#555" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M-5.20 0.00L-9.00 0.00" stroke="#555" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M-3.68 -3.68L-6.36 -6.36" stroke="#555" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M-0.00 -5.20L-0.00 -9.00" stroke="#555" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M3.68 -3.68L6.36 -6.36" stroke="#555" stroke-width="2.2" stroke-linecap="round"/></g>
+      </defs>
+      <g font-family="Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif">
+      <rect x="0.5" y="0.5" width="603" height="423" rx="3" fill="#ffffff" stroke="#c9c9c9"/>
+      <rect x="1" y="48" width="602" height="375" fill="#f2f2f2"/>
+      <text x="20" y="31" font-size="15" font-weight="700" fill="#222222">WebCal Feed for External Calendar</text>
+      <text x="584" y="31" font-size="16" font-weight="700" fill="#333333" text-anchor="end">&#10005;</text>
+      <path d="M1 48h602" stroke="#dcdcdc"/>
+
+      <text font-size="14.5" fill="#333333">
+        <tspan x="20" y="76">To subscribe to the feeds below, right click the link for the desired feed and click</tspan>
+        <tspan x="20" y="97">the <tspan font-weight="700">Copy Link Address</tspan> option. Events for the past 2 months and the upcoming <tspan font-weight="700">12</tspan></tspan>
+        <tspan x="20" y="118"><tspan font-weight="700">months</tspan> will be included in the feed. It may take up to an hour for any setting</tspan>
+        <tspan x="20" y="139">changes to be reflected in your external calendars.</tspan>
+      </text>
+
+      <rect x="16" y="158" width="572" height="254" fill="#ffffff" stroke="#dddddd"/>
+      <text x="32" y="190" font-size="17" fill="#8a8a8a">My Calendars</text>
+      <path d="M20 204h564" stroke="#e6e6e6" stroke-width="1"/>
+      <path d="M20 240h564" stroke="#e6e6e6" stroke-width="1"/>
+      <path d="M20 274h564" stroke="#e6e6e6" stroke-width="1"/>
+      <path d="M20 308h564" stroke="#e6e6e6" stroke-width="1"/>
+      <path d="M20 342h564" stroke="#e6e6e6" stroke-width="1"/>
+      <path d="M20 376h564" stroke="#e6e6e6" stroke-width="1"/>
+
+      <path d="M32 258l9 0-4.5 6z" fill="#b3541e"/>
+      <text x="47" y="262" font-size="14.5" fill="#b3541e">Individual Filter Feeds</text>
+
+      <text x="32" y="228" font-size="14.5" fill="#333333">Entire Calendar:</text>
+      <text x="226" y="228" font-size="14.5" fill="#3a6ea5">My Calendars</text>
+      <text x="32" y="296" font-size="14.5" fill="#333333">Schedule:</text>
+      <text x="226" y="296" font-size="14.5" fill="#3a6ea5">Schedule</text>
+      <text x="32" y="330" font-size="14.5" fill="#333333">Games/Practices:</text>
+      <text x="226" y="330" font-size="14.5" fill="#3a6ea5">Games/Practices</text>
+      <text x="32" y="364" font-size="14.5" fill="#333333">Class Events:</text>
+      <text x="226" y="364" font-size="14.5" fill="#3a6ea5">Class Events</text>
+      <use href="#gear-icon" x="557" y="359"/>
+      <text x="32" y="398" font-size="14.5" fill="#333333">Group Events:</text>
+      <text x="226" y="398" font-size="14.5" fill="#3a6ea5">Group Events</text>
+      <use href="#gear-icon" x="557" y="393"/>
+
+      <rect x="20.5" y="276.5" width="563" height="31" rx="3" fill="none" stroke="#C11430" stroke-width="2"/>
+      </g>
+    </svg>
+      <figcaption class="tb-caption">
+        <span class="tb-arrow">&uarr;</span>
+        <span>The dialog that opens. Your own feeds are the ones under <b>My Calendars</b>.</span>
+      </figcaption>
+    </figure>
+
     <ol start="3">
       <li>Expand <b>Individual Filter Feeds</b></li>
-      <li><b>Right-click</b> the feed you want and choose <b>Copy link</b></li>
+      <li><b>Right-click</b> the feed you want and choose <b>Copy Link Address</b></li>
     </ol>
 
     <div class="feed-label">Use a feed from &ldquo;My Calendars&rdquo;</div>
