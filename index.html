@@ -332,12 +332,32 @@
     padding: 0.12rem 0.45rem; border-radius: 10px; vertical-align: 1px;
   }
 
+  /* ===== Standalone reference section (always visible) ===== */
+  .section-h .h-icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid var(--raider); color: var(--raider);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .section-h .h-icon svg { width: 15px; height: 15px; }
+  .section-h .h-tag {
+    margin-left: auto;
+    font-size: 0.66rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--text-dim); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.15rem 0.55rem; white-space: nowrap;
+  }
+  #remove { scroll-margin-top: 1rem; }
+  .subhead {
+    font-size: 0.95rem; font-weight: 600; color: var(--text);
+    margin: 1.75rem 0 0.6rem;
+  }
+  .subhead:first-of-type { margin-top: 1rem; }
+
   /* ===== How-to-delete block ===== */
   .how-delete { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
   .how-delete .feed-label { margin-top: 0; }
   .how-delete ol { margin-left: 1.2rem; }
   .how-delete li { margin-bottom: 0.5rem; }
-  .how-delete .tip {
+  .tip {
     display: block; margin-top: 0.25rem;
     color: var(--text-dim); font-size: 0.86rem; line-height: 1.45;
   }
@@ -661,7 +681,8 @@
   </div>
 
   <p class="lead lead-cta">
-    Start with <a href="#sec1">Step 1</a> below. Already have your <code>.ics</code> file? <a href="#sec2">Skip to the drop zone.</a> Takes about a minute, and <strong>everything runs in your browser &mdash; nothing is uploaded.</strong>
+    Start with <a href="#sec1">Step 1</a> below. Already have your <code>.ics</code> file? <a href="#sec2">Skip to the drop zone.</a> Need to undo an earlier import? <a href="#remove">Removing a past import.</a><br>
+    Takes about a minute, and <strong>everything runs in your browser &mdash; nothing is uploaded.</strong>
   </p>
 
   <section class="workflow-strip">
@@ -935,24 +956,72 @@
     </div>
 
     <div class="how-delete">
-      <div class="feed-label">How to delete a previous import</div>
-      <p>Outlook has no &ldquo;undo this import&rdquo; button, but its calendar can be turned into a sortable table &mdash; which makes this a single selection instead of hunting through months of grid.</p>
-      <ol>
-        <li>Open <b>Calendar</b> in Outlook</li>
-        <li>Go to the <b>View</b> tab &rarr; <b>Change View</b> &rarr; <b>List</b><span class="tip">This is the step most people have never used. It turns the calendar into a flat, sortable list of every appointment.</span></li>
-        <li>Click the <b>Categories</b> column heading to sort by it &mdash; or type <code class="stamp-name">MyRJ Import</code> into the search box</li>
-        <li>Click the first event in the block, then <b>Shift+click</b> the last one</li>
-        <li>Press <b>Delete</b></li>
-        <li>Switch back with <b>View</b> &rarr; <b>Change View</b> &rarr; <b>Calendar</b></li>
-      </ol>
-      <div class="validation warning">
-        <div class="v-header">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-          Check the selection before you press Delete
-        </div>
-        <div class="v-summary">Read down the <b>Subject</b> column and confirm every row is a class block or a Red/White day marker. If a real appointment of yours has crept into the selection, Ctrl+click it to deselect. Deleted calendar items go to <b>Deleted Items</b>, so a mistake is recoverable &mdash; but it's easier to catch it here.</div>
-      </div>
+      <div class="feed-label">When it's time to remove this import</div>
+      <p>Your schedule will change, and MyRJ gives every download new event IDs, so the old set has to come out by hand before you import again. Full directions are in <a href="#remove"><b>Removing a past import</b></a> below &mdash; that section stays on this page whether or not you've run the tool, so bookmark it and come back whenever you need it.</p>
     </div>
+  </section>
+
+
+  <!-- ===== Removing a past import (always visible reference) ===== -->
+  <section class="section" id="remove">
+    <div class="section-h">
+      <div class="h-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/><path d="M10 11v5M14 11v5"/></svg>
+      </div>
+      <h2>Removing a past import</h2>
+      <span class="h-tag">Reference &mdash; always here</span>
+    </div>
+
+    <p>You'll need this when your schedule changes, at the start of a new semester, or if you imported twice by accident. Outlook has no &ldquo;undo this import&rdquo; button &mdash; but you never have to hunt through months of calendar grid either.</p>
+
+    <div class="validation success">
+      <div class="v-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+        First: did you import into a calendar of its own?
+      </div>
+      <div class="v-summary">If you created a separate calendar for this (something like &ldquo;MyRJ Schedule&rdquo;), you're done in two clicks: <b>right-click that calendar</b> in the left-hand list &rarr; <b>Delete Calendar</b>. Everything in it goes at once and nothing of yours is touched. If you imported into your main calendar instead, use the steps below &mdash; and consider a separate calendar next time.</div>
+    </div>
+
+    <div class="subhead">Deleting from your main calendar</div>
+    <p>Outlook's calendar can be turned into a sortable table, which makes this one selection instead of hundreds of clicks.</p>
+    <ol>
+      <li>Open <b>Calendar</b> in Outlook</li>
+      <li><b>View</b> tab &rarr; <b>Change View</b> &rarr; <b>List</b><span class="tip">The step most people have never used. It turns the calendar into a flat, sortable list of every appointment you have.</span></li>
+      <li><b>Find the batch</b> using one of the three handles below &mdash; they all gather the imported events into one contiguous block</li>
+      <li>Click the <b>first</b> event in the block, then <b>Shift+click</b> the <b>last</b></li>
+      <li>Read down the <b>Subject</b> column and confirm it's all class blocks and Red/White day markers</li>
+      <li>Press <b>Delete</b></li>
+      <li><b>View</b> &rarr; <b>Change View</b> &rarr; <b>Calendar</b> to go back to normal</li>
+    </ol>
+
+    <div class="feed-label">Three ways to find the batch</div>
+    <ul class="feed-list">
+      <li><b>The import label</b> <span class="feed-tag">Try first</span><span>Every event this tool writes is tagged with the category <code class="stamp-name">MyRJ Import YYYY-MM</code> &mdash; the year and month you cleaned it. Click the <b>Categories</b> column heading to sort, or type <code class="stamp-name">category:"MyRJ Import"</code> in the search box with the scope set to <b>Current Folder</b>. The month in the label is also the answer to &ldquo;when did I import this?&rdquo;</span></li>
+      <li><b>The moment they arrived</b><span>Works even when there's no label. Right-click any column heading &rarr; <b>Field Chooser</b> &rarr; drag <b>Created</b> onto the header row, then click it to sort. Every event from a single import shares one timestamp down to the minute, so the whole batch sits together &mdash; and that timestamp is the import date, recovered.</span></li>
+      <li><b>MyRJ's own categories</b><span>Schedule-feed events arrive tagged <code class="stamp-name">Podium</code> and <code class="stamp-name">Events</code>. Nothing you create yourself carries those, so sorting the <b>Categories</b> column gathers them too. Check the selection carefully with this one &mdash; it's the least specific of the three.</span></li>
+    </ul>
+
+    <div class="validation warning">
+      <div class="v-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg>
+        Imported before August 2026? The label may be missing
+      </div>
+      <div class="v-summary">Earlier versions of this tool could lose the <code class="stamp-name">MyRJ Import</code> label on the way into Outlook, on events whose category list was already long. If you don't see it, that's why &mdash; use the <b>Created</b> column instead, which works regardless. Files cleaned here now keep the label reliably.</div>
+    </div>
+
+    <div class="validation warning">
+      <div class="v-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        Check the selection before you press Delete
+      </div>
+      <div class="v-summary">If a real appointment of yours has crept into the selection, <b>Ctrl+click</b> it to deselect. Deleted calendar items go to <b>Deleted Items</b> and can be dragged back, and <b>Ctrl+Z</b> undoes the delete if you catch it immediately &mdash; but it's easier to catch here than to fish items out afterwards.</div>
+    </div>
+
+    <div class="subhead">If you don't see &ldquo;Change View&rdquo;</div>
+    <p>You're in <b>new Outlook</b> or Outlook on the web, which has no List view. Switch the <b>New Outlook</b> toggle off (top right) to get the classic version, where all of the above works. Without List view there's no reliable way to bulk-select an import &mdash; which is the strongest argument for putting the next one in its own calendar.</p>
+
+    <div class="subhead">Then re-import</div>
+    <p>Once the old set is gone, <a href="#sec1">start again at Step 1</a>: download a fresh copy of the feed, clean it here, and import. The new batch gets its own dated label, so next time this takes about a minute.</p>
   </section>
 
   <section class="resources">
@@ -1086,47 +1155,69 @@ function makeStamp(d){
   return STAMP_PREFIX + d.getFullYear() + "-" + (mm < 10 ? "0" : "") + mm;
 }
 
-/* Add the stamp to an event's CATEGORIES, replacing any stamp from a
-   previous run so re-running never accumulates labels. CATEGORIES is a
+/* Add the stamp to an event's CATEGORIES. The stamp always goes on the
+   *first* CATEGORIES property, never a second one: RFC 5545 permits an
+   event to carry more than one, but Outlook reads the first and silently
+   drops the rest — which is how a stamp can vanish between here and the
+   calendar. Folded lines are unfolded, rewritten, and re-folded rather
+   than skipped. The stamp is placed first in the list so every imported
+   event sorts together under the Categories column. CATEGORIES is a
    separate property from SUMMARY — the event title is never touched. */
 function applyStamp(lines, stamp){
   if(!stamp) return lines;
-  var out = lines.slice(), at = -1, end = -1, i;
+  var out = lines.slice(), at = -1, i;
 
   for(i=0;i<out.length;i++){
-    if(end === -1 && /^END:VEVENT\s*$/i.test(out[i])) end = i;
-    if(at === -1 && /^CATEGORIES[;:]/i.test(out[i])) at = i;
+    if(/^CATEGORIES[;:]/i.test(out[i])){ at = i; break; }
   }
-  /* Recompute END properly (last one wins) */
-  for(i=out.length-1;i>=0;i--){ if(/^END:VEVENT\s*$/i.test(out[i])){ end = i; break; } }
 
-  /* A folded CATEGORIES is not worth rewriting in place — fall through to
-     adding a separate property instead. */
-  var folded = (at !== -1 && at + 1 < out.length && /^[ \t]/.test(out[at+1]));
+  if(at !== -1){
+    /* Unfold: RFC 5545 continuation lines begin with a space or tab. */
+    var stop = at + 1;
+    while(stop < out.length && /^[ \t]/.test(out[stop])) stop++;
+    var logical = out[at];
+    for(i = at + 1; i < stop; i++) logical += out[i].slice(1);
 
-  if(at !== -1 && !folded){
-    var colon = out[at].indexOf(":");
-    var head  = out[at].slice(0, colon + 1);
-    var parts = out[at].slice(colon + 1).split(",");
+    var colon = logical.indexOf(":");
+    var head  = logical.slice(0, colon + 1);
+    var parts = logical.slice(colon + 1).split(",");
     var keep  = [];
     for(i=0;i<parts.length;i++){
+      /* Drop the stamp from a previous run so re-running never stacks them. */
       if(parts[i] !== "" && !isStamp(parts[i])) keep.push(parts[i]);
     }
-    keep.push(stamp);
-    var rebuilt = head + keep.join(",");
-    if(octets(rebuilt) <= 75){ out[at] = rebuilt; return out; }
+    keep.unshift(stamp);
+    return out.slice(0, at).concat(foldLine(head + keep.join(",")), out.slice(stop));
   }
-  /* Fallback: a separate CATEGORIES property (RFC 5545 permits more than
-     one). Only possible if we know where the block ends. */
-  if(end > 0){
-    for(i=0;i<out.length;i++){
-      if(/^CATEGORIES[;:]/i.test(out[i]) && isStamp(out[i].slice(out[i].indexOf(":")+1))){
-        return out;                       // already stamped on a line of its own
-      }
-    }
-    out.splice(end, 0, "CATEGORIES:" + stamp);
+
+  /* No CATEGORIES on this event — add one just before END:VEVENT. */
+  var endAt = -1;
+  for(i = out.length - 1; i >= 0; i--){
+    if(/^END:VEVENT\s*$/i.test(out[i])){ endAt = i; break; }
   }
+  if(endAt > 0) return out.slice(0, endAt).concat(foldLine("CATEGORIES:" + stamp), out.slice(endAt));
   return out;
+}
+
+/* Fold a logical line to the 75-octet limit, breaking on character
+   boundaries (never mid-codepoint) and prefixing continuations with a
+   single space. That leading space counts toward the limit, so
+   continuation lines get 74 octets of content. */
+function foldLine(s){
+  var res = [], cur = "", n = 0, first = true, i, ch, code, w;
+  for(i=0;i<s.length;i++){
+    ch = s.charAt(i);
+    code = s.charCodeAt(i);
+    if(code >= 0xD800 && code <= 0xDBFF && i + 1 < s.length){ ch += s.charAt(++i); }
+    w = octets(ch);
+    if(n + w > (first ? 75 : 74)){
+      res.push(first ? cur : " " + cur);
+      first = false; cur = ""; n = 0;
+    }
+    cur += ch; n += w;
+  }
+  res.push(first ? cur : " " + cur);
+  return res;
 }
 function isStamp(s){ return s.slice(0, STAMP_PREFIX.length).toLowerCase() === STAMP_PREFIX.toLowerCase(); }
 function octets(s){
