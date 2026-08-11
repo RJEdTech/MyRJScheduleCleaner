@@ -61,13 +61,24 @@ ever moved.
 - Splits on `\r\n | \n | \r`; always writes back `\r\n`.
 - Detects all-day via `DTSTART` parameters matching `VALUE=DATE` (not `DATE-TIME`),
   falling back to "no `T######` in the value."
-- Honours RFC 5545 line folding when *reading* property values. Never re-folds on write.
+- Honours RFC 5545 line folding when *reading* property values, and re-folds correctly when
+  rewriting `CATEGORIES` — on character boundaries, continuations prefixed with one space,
+  every line inside 75 octets.
 - Skips insertion if the property is already present — **idempotent**, so running the
   tool on its own output is byte-for-byte a no-op.
 - Preserves `UID`s untouched.
-- Stamps every event it writes with an extra category, `MyRJ Import <YYYY-MM>`, appended to the
-  existing `CATEGORIES` value. `SUMMARY` — the event title — is never touched. Re-running replaces
-  the stamp rather than accumulating labels, and the stamped line stays inside 75 octets.
+- Labels every event it writes by **prepending** to the existing `CATEGORIES` value — never as a
+  second `CATEGORIES` property, because Outlook reads the first occurrence and silently discards
+  the rest. `SUMMARY` — the event title — is never touched.
+  - `MyRJ Import` — stable, never changes. Category *names* travel in an `.ics`; category
+    *colours* live only in the reader's mailbox, so an imported category arrives colourless and
+    Outlook draws the event grey. A label that survives every semester means that colour is
+    assigned once rather than every August and January.
+  - `MyRJ Import <YYYY-MM>` — the batch handle, for deleting one semester's import and not another.
+  - Optionally a per-class label first (`Theology 3`, `White Day`, …), which is what Outlook
+    colours the event from. Sections of the same course share one label; the division suffix
+    (`(BD)` / `(GD)`) is added only when the same course appears in both.
+  - Re-running replaces the dated label and never stacks duplicates of the others.
 - A truncated file (unterminated `VEVENT`) is detected, passed through untouched, and
   flagged to the user — rather than having a property injected at the wrong offset.
 
@@ -158,7 +169,7 @@ npm install playwright && node test/e2e.js Schedule.ics                       # 
 Verified against four real exports — `Schedule` (288 events), `My Calendars` (288),
 `Class Events` (0), and `School Calendars` (1,735 events with 40 folded lines,
 `LOCATION` on 1,302 and `DESCRIPTION` on 61) — plus synthetic empty and single-event feeds.
-**204 + 93 + 50 checks, all passing.**
+**53 + 137 + 40 checks, all passing** (`verify` + `acceptance` + `e2e`).
 
 ### Deleting a previous import
 
@@ -167,11 +178,15 @@ duplicates — and Outlook has no "undo this import" command. The stamp exists t
 single selection:
 
 1. Calendar → **View** → **Change View** → **List** — turns the calendar into a sortable table
-2. Sort by **Categories**, or search the stamp (`MyRJ Import 2026-08`)
+2. Find the batch three ways: search `category:"MyRJ Import"`, sort the **Categories** column, or
+   add the **Created** column via Field Chooser — a single import shares one timestamp to the
+   minute, so the batch is contiguous and the timestamp recovers the forgotten import date
 3. Select the block, **Delete**, then switch back to **Calendar** view
 
-Step 2 is the part nobody knows about, and it's what makes this tractable. The page carries these
-steps inline, with the live stamp value filled in after cleaning.
+Step 2 is the part nobody knows about, and it's what makes this tractable. These steps live in a
+standalone always-visible `#remove` section, linked from the top of the page — not inside a
+workflow step that is hidden until you have run the tool, which is where they were through v1.2
+and where nobody returning a semester later could find them.
 
 ### Finding: Blackbaud regenerates UIDs on every export
 

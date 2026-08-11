@@ -1918,7 +1918,13 @@ function init(){
 if(typeof document !== "undefined") init();
 if(typeof module !== "undefined" && module.exports){
   module.exports = { parseIcs:parseIcs, buildCleaned:buildCleaned, isAllDay:isAllDay,
-                     getFolded:getFolded, normalizeUrl:normalizeUrl, tally:tally };
+                     getFolded:getFolded, normalizeUrl:normalizeUrl, tally:tally,
+                     /* label machinery — exported so the suites can unit-test the
+                        grouping rules directly instead of inferring them from output */
+                     applyStamp:applyStamp, foldLine:foldLine, dedupe:dedupe,
+                     parseCourse:parseCourse, dayLabel:dayLabel, safeCategory:safeCategory,
+                     labelPlan:labelPlan, leadLabels:leadLabels, makeStamp:makeStamp,
+                     STAMP_BASE:STAMP_BASE };
 }
 </script>
 </body>
