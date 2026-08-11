@@ -296,6 +296,8 @@
 
   /* ===== MyRJ feed dialog mock (inline SVG, fixed light like the real dialog) ===== */
   .dialog-mock { margin: 1.5rem 0; }
+  .dialog-mock.wide .dialog-svg { max-width: 100%; }
+  .dialog-mock.wide .tb-caption { max-width: 100%; }
   .dialog-mock .dialog-svg {
     display: block;
     width: 100%;
@@ -305,6 +307,31 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
   }
   .dialog-mock .tb-caption { max-width: 604px; }
+
+  /* ===== Outlook Add-calendar dialog mock =====
+     Surfaces follow the page theme so it reads native in light or dark;
+     deliberately monochrome apart from the Raider highlights, because
+     Outlook's accent colour is per-user and copying one would mislead. */
+  [data-theme="light"] {
+    --ol-side: #f3f3f3; --ol-main: #ffffff; --ol-text: #1f1f1f; --ol-mute: #5f5f5f;
+    --ol-line: #e2e2e2; --ol-field: #ffffff; --ol-border: #adadad; --ol-btn: #f5f5f5;
+  }
+  [data-theme="dark"] {
+    --ol-side: #1b1b1b; --ol-main: #0f0f0f; --ol-text: #f0f0f0; --ol-mute: #a0a0a0;
+    --ol-line: #303030; --ol-field: #141414; --ol-border: #5a5a5a; --ol-btn: #242424;
+  }
+  .ol-side { fill: var(--ol-side); }
+  .ol-main { fill: var(--ol-main); }
+  .ol-text { fill: var(--ol-text); }
+  .ol-mute { fill: var(--ol-mute); }
+  .ol-line { stroke: var(--ol-line); }
+  .ol-field { fill: var(--ol-field); stroke: var(--ol-border); }
+  .ol-btn   { fill: var(--ol-btn);   stroke: var(--ol-border); }
+  .ol-pri   { fill: var(--ol-text); }
+  .ol-pri-t { fill: var(--ol-main); }
+  .ol-ico   { stroke: var(--ol-mute); }
+  .ol-sel   { fill: var(--raider); }
+  .ol-ring  { stroke: var(--raider); }
 
   /* ===== Feed picker ===== */
   .feed-label {
@@ -330,6 +357,30 @@
     background: var(--raider); color: #ffffff;
     font-size: 0.62rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
     padding: 0.12rem 0.45rem; border-radius: 10px; vertical-align: 1px;
+  }
+
+  .opt-label {
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-dim);
+    margin: 1.5rem 0 0.6rem;
+  }
+  #modesBlock .opt-label:first-child { margin-top: 0; }
+  .opt-help { color: var(--text-mute); font-size: 0.92rem; margin: -0.2rem 0 0.9rem; max-width: 720px; }
+  .opt-help b { color: var(--text); font-weight: 500; }
+
+  /* ===== Labels-created list (after cleaning) ===== */
+  .label-list { margin: 1.25rem 0 0; }
+  .label-list ul { list-style: none; margin: 0.6rem 0 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.4rem; }
+  .label-list li {
+    display: flex; align-items: baseline; gap: 0.5rem;
+    background: var(--bg); border: 1px solid var(--border);
+    border-left: 3px solid var(--raider); border-radius: 3px;
+    padding: 0.5rem 0.7rem; font-size: 0.9rem; color: var(--text);
+  }
+  .label-list li .lc {
+    margin-left: auto; color: var(--text-dim); font-size: 0.8rem;
+    font-family: "IBM Plex Mono", "Consolas", "Courier New", monospace;
   }
 
   /* ===== Standalone reference section (always visible) ===== */
@@ -530,8 +581,11 @@
     padding: 0.15rem 0.5rem; border-radius: 10px;
     letter-spacing: 0.05em; text-transform: uppercase;
   }
-  .path-card .path-title { font-weight: 500; font-size: 1rem; margin-bottom: 0.5rem; color: var(--text); padding-right: 96px; }
-  .path-card .path-desc { color: var(--text-mute); font-size: 0.9rem; line-height: 1.45; }
+  /* These are <span>s inside a <label>; without display:block the title and
+     description run together on one line and the padding-right meant to
+     clear the badge does nothing. */
+  .path-card .path-title { display: block; font-weight: 500; font-size: 1rem; margin-bottom: 0.5rem; color: var(--text); padding-right: 96px; }
+  .path-card .path-desc { display: block; color: var(--text-mute); font-size: 0.9rem; line-height: 1.45; }
 
   /* ===== Event tables ===== */
   .peek { margin-bottom: 1.5rem; }
@@ -700,7 +754,7 @@
         <div class="step-num">2</div>
         <div class="step-content">
           <div class="step-title">Clean it here</div>
-          <div class="step-detail">All-day markers tagged free; class blocks untouched</div>
+          <div class="step-detail">Day markers stop blocking time &mdash; and you choose one colour or one per class</div>
         </div>
       </div>
       <svg class="workflow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -894,9 +948,11 @@
 
   <!-- ===== 3. Choose ===== -->
   <section class="section is-hidden" id="sec3">
-    <div class="section-h"><div class="step-num" id="num3">3</div><h2>Choose what to do with the all-day events</h2></div>
+    <div class="section-h"><div class="step-num" id="num3">3</div><h2>Choose your options</h2></div>
     <div class="stat-grid" id="stats"></div>
 
+    <div id="modesBlock">
+    <div class="opt-label">What should happen to the all-day Red and White day markers?</div>
     <div class="path-grid" id="modes">
       <label class="path-card is-selected" id="modeFree">
         <input type="radio" name="mode" value="free" checked>
@@ -908,6 +964,23 @@
         <input type="radio" name="mode" value="strip">
         <span class="path-title">Remove them entirely</span>
         <span class="path-desc">Only your timed class blocks come through. Choose this if you already subscribe to the Red Day and White Day calendars separately and don't want them twice.</span>
+      </label>
+    </div>
+    </div>
+
+    <div class="opt-label">How do you want to colour them in Outlook?</div>
+    <p class="opt-help">Outlook colours calendar events by label, and you choose the colours yourself once the file is imported. What you pick here decides <b>how many colours you get to choose</b>.</p>
+    <div class="path-grid" id="labelModes">
+      <label class="path-card is-selected" id="labelOne">
+        <input type="radio" name="labelMode" value="one" checked>
+        <span class="path-badge">Simplest</span>
+        <span class="path-title">One colour for everything</span>
+        <span class="path-desc">All of it &mdash; classes, Red days, White days &mdash; gets a single label. You pick <b>one colour</b> in Outlook and the whole MyRJ schedule uses it. One setting, thirty seconds, done.</span>
+      </label>
+      <label class="path-card" id="labelClass">
+        <input type="radio" name="labelMode" value="class">
+        <span class="path-title">A colour for each class</span>
+        <span class="path-desc">Each course gets its own label, and Red days, White days and holidays get theirs. You pick <b>a colour for each one</b>, so your week reads at a glance. Every section of a course shares a label &mdash; you colour a prep, not a period. Teach the same course in both divisions and those split into <code>(BD)</code> and <code>(GD)</code>.</span>
       </label>
     </div>
 
@@ -928,9 +1001,81 @@
     <ol>
       <li><b>Add calendar</b> &rarr; <b>Upload from file</b></li>
       <li>Browse to the file you just downloaded</li>
-      <li>Set <b>Add to</b> &rarr; <b>Calendar</b> &mdash; your own calendar, not a new one</li>
+      <li>Set the <b>Add to</b> dropdown &mdash; the box under the file name &mdash; to a calendar <b>you already own</b>, not a new one</li>
       <li><b>Add to calendar</b></li>
     </ol>
+
+
+    <div class="validation success">
+      <div class="v-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.2"/><circle cx="17.5" cy="10.5" r="1.2"/><circle cx="8.5" cy="7.5" r="1.2"/><circle cx="6.5" cy="12.5" r="1.2"/><path d="M12 3a9 9 0 1 0 0 18c.8 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1-.3-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8z"/></svg>
+        Imported events look grey? Give the label a colour
+      </div>
+      <div class="v-summary">
+        <p>Outlook carries category <b>names</b> inside the file, but category <b>colours</b> live only in your own mailbox. Your imported events arrive tagged with categories Outlook has never seen, so it creates them with no colour &mdash; and an event with a colourless category is drawn grey instead of taking your calendar's colour.</p>
+        <p>One-time fix: <b>Settings</b> &rarr; <b>Accounts</b> &rarr; <b>Categories</b>, find the label, click the edit icon and pick a colour. Every event carrying it recolours at once. In classic Outlook it's <b>Categorize</b> &rarr; <b>All Categories</b> on any event.</p>
+        <p><b>Colour the labels listed above</b> &mdash; the ones this run created. If you chose one label for everything that's a single <code class="stamp-name">MyRJ Import</code>; if you chose a label per class it's one per course plus <code class="stamp-name">Red Day</code>, <code class="stamp-name">White Day</code> and <code class="stamp-name">School Calendar</code>. Leave the dated label alone: it exists for finding and deleting this batch later, not for colour.</p>
+        <p>These names don't change from semester to semester, so this is genuinely one-time. Next year's import lands already coloured.</p>
+      </div>
+    </div>
+
+    <figure class="dialog-mock wide">
+      <svg class="dialog-svg" viewBox="0 0 864 462" role="img" aria-labelledby="olTitle olDesc" xmlns="http://www.w3.org/2000/svg">
+      <title id="olTitle">The Add calendar dialog in Outlook, on Upload from file</title>
+      <desc id="olDesc">A left menu with Upload from file selected, and a right pane containing a file field showing Schedule-clean.ics with a Browse button, an Add to dropdown set to your own calendar and outlined in red, and Add to calendar and Preview buttons.</desc>
+      <g font-family="Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif">
+      <rect x="0" y="0" width="864" height="462" class="ol-main"/>
+      <rect x="0" y="0" width="216" height="462" class="ol-side"/>
+      <path d="M216.5 0v462" class="ol-line"/>
+      <text x="20" y="37" font-size="19" font-weight="600" class="ol-text">Add calendar</text>
+      <path d="M16 113h184" class="ol-line" stroke-width="1"/>
+      <path d="M16 213h184" class="ol-line" stroke-width="1"/>
+      <path d="M16 349h184" class="ol-line" stroke-width="1"/>
+      <g transform="translate(20 83) scale(0.67)" fill="none" stroke="var(--ol-mute)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></g>
+      <text x="40" y="96" font-size="14.5" class="ol-text">Recommended</text>
+      <g transform="translate(20 139) scale(0.67)" fill="none" stroke="var(--ol-mute)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11v7M4 4v16h16v-6M20.5 6.5l-7 7-3.5 1 1-3.5 7-7a1.8 1.8 0 0 1 2.5 2.5z"/></g>
+      <text x="40" y="152" font-size="14.5" class="ol-text">Edit my calendars</text>
+      <g transform="translate(20 179) scale(0.67)" fill="none" stroke="var(--ol-mute)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v15H4zM4 9h16M9 14h6M12 11.5v5"/></g>
+      <text x="40" y="192" font-size="14.5" class="ol-text">Create blank calendar</text>
+      <g transform="translate(20 235) scale(0.67)" fill="none" stroke="var(--ol-mute)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3.2 3.2 0 1 0 0-6.4A3.2 3.2 0 0 0 9 11zM3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M17 8v6M14 11h6"/></g>
+      <text x="40" y="248" font-size="14.5" class="ol-text">Add from directory</text>
+      <g transform="translate(20 275) scale(0.67)" fill="none" stroke="var(--ol-mute)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3.5 12h17M12 3c2.5 2.4 3.8 5.5 3.8 9S14.5 18.6 12 21c-2.5-2.4-3.8-5.5-3.8-9S9.5 5.4 12 3z"/></g>
+      <text x="40" y="288" font-size="14.5" class="ol-text">Subscribe from web</text>
+      <rect x="0" y="304" width="216" height="38" fill="var(--ol-btn)"/>
+      <rect x="0" y="304" width="3" height="38" class="ol-sel"/>
+      <g transform="translate(20 315) scale(0.67)" fill="none" stroke="var(--raider)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7l-4-4zM14 3v4h4M12 17v-6M9.5 13.5L12 11l2.5 2.5"/></g>
+      <text x="40" y="328" font-size="14.5" class="ol-sel" font-weight="600">Upload from file</text>
+      <g transform="translate(20 371) scale(0.67)" fill="none" stroke="var(--ol-mute)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3.5 12h17M12 3c2.5 2.4 3.8 5.5 3.8 9S14.5 18.6 12 21c-2.5-2.4-3.8-5.5-3.8-9S9.5 5.4 12 3z"/></g>
+      <text x="40" y="384" font-size="14.5" class="ol-text">Holidays</text>
+      <g transform="translate(20 411) scale(0.67)" fill="none" stroke="var(--ol-mute)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16v-6H4zM4 14c0-2 1.6-3 4-3h8c2.4 0 4 1 4 3M8 8V6M12 8V5.5M16 8V6"/></g>
+      <text x="40" y="424" font-size="14.5" class="ol-text">Birthdays</text>
+
+      <text x="236" y="37" font-size="19" font-weight="600" class="ol-text">Upload from file</text>
+      <path d="M216 62.5h648" class="ol-line"/>
+      <text x="236" y="94" font-size="14.5" class="ol-text">Import events from an .ics file by dragging it here or by browsing this computer.</text>
+
+      <rect x="236.5" y="131.5" width="400" height="31" rx="2" class="ol-field" stroke-width="1"/>
+      <text x="248" y="152" font-size="14" class="ol-mute">Schedule-clean.ics</text>
+      <rect x="655.5" y="131.5" width="90" height="31" rx="2" class="ol-btn" stroke-width="1"/>
+      <text x="700" y="152" font-size="14" class="ol-text" text-anchor="middle">Browse</text>
+
+      <rect x="236.5" y="190.5" width="400" height="31" rx="2" class="ol-field" stroke-width="1"/>
+      <circle cx="254" cy="206" r="5" class="ol-sel"/>
+      <text x="268" y="211" font-size="14" class="ol-text">Calendar (you@regisjesuit.com)</text>
+      <path d="M615 202l6 6 6-6" fill="none" stroke="var(--ol-mute)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="234" y="188" width="405" height="36" rx="3" fill="none" class="ol-ring" stroke-width="2"/>
+
+      <rect x="236" y="250" width="152" height="32" rx="2" class="ol-pri"/>
+      <text x="312" y="271" font-size="14" font-weight="600" class="ol-pri-t" text-anchor="middle">Add to calendar</text>
+      <rect x="400.5" y="250.5" width="95" height="31" rx="2" class="ol-btn" stroke-width="1"/>
+      <text x="448" y="271" font-size="14" class="ol-text" text-anchor="middle">Preview</text>
+      </g>
+    </svg>
+      <figcaption class="tb-caption">
+        <span class="tb-arrow">&uarr;</span>
+        <span>The dialog you're aiming for. The <b>Add to</b> box is the one that matters &mdash; point it at a calendar you already own. Your Outlook's colours and accent will differ; the layout won't.</span>
+      </figcaption>
+    </figure>
 
     <div class="validation error">
       <div class="v-header">
@@ -951,7 +1096,7 @@
       </div>
       <div class="v-summary">
         <p>MyRJ gives every download a <b>brand-new set of event IDs</b>. Outlook decides whether it already has an event by matching those IDs, so it can never recognise a re-import. Import again without deleting and you get <b>two of everything</b> &mdash; then three.</p>
-        <p>To make that easy, every event in your file is labelled with the category <code class="stamp-name">MyRJ Import</code>. Nothing you create yourself will carry it, so it's a safe thing to select and delete.</p>
+        <p>To make that easy, every event in your file carries <code class="stamp-name">MyRJ Import</code> &mdash; on everything this tool has ever produced &mdash; and <code class="stamp-name stamp-dyn">MyRJ Import 2026-08</code>, the year and month you cleaned it, on this batch alone. Nothing you create yourself will carry either, so both are safe to select and delete. Any per-class labels sit alongside them and don't affect this.</p>
       </div>
     </div>
 
@@ -996,7 +1141,7 @@
 
     <div class="feed-label">Three ways to find the batch</div>
     <ul class="feed-list">
-      <li><b>The import label</b> <span class="feed-tag">Try first</span><span>Every event this tool writes is tagged with the category <code class="stamp-name">MyRJ Import YYYY-MM</code> &mdash; the year and month you cleaned it. Click the <b>Categories</b> column heading to sort, or type <code class="stamp-name">category:"MyRJ Import"</code> in the search box with the scope set to <b>Current Folder</b>. The month in the label is also the answer to &ldquo;when did I import this?&rdquo;</span></li>
+      <li><b>The import labels</b> <span class="feed-tag">Try first</span><span>Every event this tool writes carries <code class="stamp-name">MyRJ Import</code> plus a dated <code class="stamp-name">MyRJ Import YYYY-MM</code>. Searching <code class="stamp-name">category:"MyRJ Import"</code> with the scope set to <b>Current Folder</b> finds every import you've ever run; the dated one narrows it to a single batch, and its month answers &ldquo;when did I import this?&rdquo; Sorting the <b>Categories</b> column groups them either way.</span></li>
       <li><b>The moment they arrived</b><span>Works even when there's no label. Right-click any column heading &rarr; <b>Field Chooser</b> &rarr; drag <b>Created</b> onto the header row, then click it to sort. Every event from a single import shares one timestamp down to the minute, so the whole batch sits together &mdash; and that timestamp is the import date, recovered.</span></li>
       <li><b>MyRJ's own categories</b><span>Schedule-feed events arrive tagged <code class="stamp-name">Podium</code> and <code class="stamp-name">Events</code>. Nothing you create yourself carries those, so sorting the <b>Categories</b> column gathers them too. Check the selection carefully with this one &mdash; it's the least specific of the three.</span></li>
     </ul>
@@ -1144,11 +1289,27 @@ function getDate(block){
    Mode "strip" : drop all-day events entirely.
    Idempotent: a property already present is never added twice.
    -------------------------------------------------------------------- */
-var STAMP_PREFIX = "MyRJ Import ";
+/* Every event this tool writes carries TWO labels, and the pair is
+   deliberate:
 
-/* Build the category label the tool stamps on everything it writes, e.g.
-   "MyRJ Import 2026-08". Deleting last semester's import in Outlook then
-   becomes: List view -> filter this one category -> select all -> delete. */
+     "MyRJ Import"          — never changes. Category *names* travel in the
+                              .ics; category *colours* live only in the
+                              reader's Master Category List, so an imported
+                              category arrives with no colour and Outlook
+                              draws the event grey instead of the calendar
+                              colour. Colouring a label that is stable
+                              across semesters means that fix is done once,
+                              not every August and every January.
+     "MyRJ Import 2026-08"  — the batch handle. Distinguishes this import
+                              from last semester's when it is time to
+                              delete one and not the other.
+
+   Order matters: new Outlook shows one colour per event and takes the
+   first category, so the stable label goes first. */
+var STAMP_BASE   = "MyRJ Import";
+var STAMP_PREFIX = STAMP_BASE + " ";
+
+/* Build the dated label, e.g. "MyRJ Import 2026-08". */
 function makeStamp(d){
   d = d || new Date();
   var mm = d.getMonth() + 1;
@@ -1163,7 +1324,9 @@ function makeStamp(d){
    than skipped. The stamp is placed first in the list so every imported
    event sorts together under the Categories column. CATEGORIES is a
    separate property from SUMMARY — the event title is never touched. */
-function applyStamp(lines, stamp){
+/* `lead` is an array of category names that go in front of the import
+   labels — the first is what Outlook colours the event from. */
+function applyStamp(lines, stamp, lead){
   if(!stamp) return lines;
   var out = lines.slice(), at = -1, i;
 
@@ -1186,7 +1349,9 @@ function applyStamp(lines, stamp){
       /* Drop the stamp from a previous run so re-running never stacks them. */
       if(parts[i] !== "" && !isStamp(parts[i])) keep.push(parts[i]);
     }
-    keep.unshift(stamp);
+    keep.unshift(STAMP_BASE, stamp);
+    if(lead && lead.length) keep = lead.concat(keep);
+    keep = dedupe(keep);
     return out.slice(0, at).concat(foldLine(head + keep.join(",")), out.slice(stop));
   }
 
@@ -1195,7 +1360,10 @@ function applyStamp(lines, stamp){
   for(i = out.length - 1; i >= 0; i--){
     if(/^END:VEVENT\s*$/i.test(out[i])){ endAt = i; break; }
   }
-  if(endAt > 0) return out.slice(0, endAt).concat(foldLine("CATEGORIES:" + stamp), out.slice(endAt));
+  if(endAt > 0){
+    var fresh = dedupe((lead || []).concat([STAMP_BASE, stamp]));
+    return out.slice(0, endAt).concat(foldLine("CATEGORIES:" + fresh.join(",")), out.slice(endAt));
+  }
   return out;
 }
 
@@ -1219,7 +1387,22 @@ function foldLine(s){
   res.push(first ? cur : " " + cur);
   return res;
 }
-function isStamp(s){ return s.slice(0, STAMP_PREFIX.length).toLowerCase() === STAMP_PREFIX.toLowerCase(); }
+/* Case-insensitive dedupe, first occurrence wins. Without this, running
+   the tool twice on the same file would stack a second copy of the class
+   label (which isStamp() has no way to recognise). */
+function dedupe(arr){
+  var seen = {}, out = [], i, k;
+  for(i=0;i<arr.length;i++){
+    k = String(arr[i]).toLowerCase();
+    if(arr[i] !== "" && !seen[k]){ seen[k] = 1; out.push(arr[i]); }
+  }
+  return out;
+}
+function isStamp(s){
+  var v = s.toLowerCase();
+  return v === STAMP_BASE.toLowerCase() ||
+         v.slice(0, STAMP_PREFIX.length) === STAMP_PREFIX.toLowerCase();
+}
 function octets(s){
   var n = 0;
   for(var i=0;i<s.length;i++){
@@ -1229,22 +1412,129 @@ function octets(s){
   return n;
 }
 
-function buildCleaned(doc, mode, stamp){
+/* ----------------------------------------------------------------------
+   Per-class labels (labelMode "class")
+   ----------------------------------------------------------------------
+   Derived from real exports, not guessed. A MyRJ timed event is titled
+   "<course> - <period> (<block pattern>)", e.g.
+
+     Theology 3-BD - 5 (4W-1W-3W)
+     A Theology of Encounter - 1 (MAX 25) (3W-4W-1W)
+     IMPACT 11-BD - 3 (-IMPACT)
+
+   Stripping the trailing parentheticals and the period number leaves the
+   course. That is deliberate: three sections of junior theology in three
+   different periods collapse to ONE label, so a teacher colours one prep
+   once rather than once per section. A full load produces five or six
+   labels; a light load, two or three. -------------------------------- */
+function parseCourse(summary){
+  var s = String(summary || "").replace(/\\([,;\\\\])/g, "$1").trim(), prev;
+  do { prev = s; s = s.replace(/\s*\([^()]*\)\s*$/, ""); } while(s !== prev);
+  s = s.replace(/\s+-\s+\d+\s*$/, "").trim();
+  var div = "", m = s.match(/[-–]\s*(BD|GD)\s*$/i);
+  if(m){ div = m[1].toUpperCase(); s = s.slice(0, m.index).trim(); }
+  return { course: safeCategory(s) || "MyRJ Class", div: div };
+}
+
+var DIVISION_NAME = { BD: "Boys Division", GD: "Girls Division" };
+
+/* Decide, for this file, whether course names need the division spelled
+   out. Most teachers work in one division, so "Theology 3" is enough and
+   "Theology 3 (BD)" would be noise on every label. Someone who teaches the
+   same course in both divisions genuinely needs them apart, so the suffix
+   appears only for the courses where it disambiguates something. */
+function labelPlan(doc){
+  var divsByCourse = {}, divsSeen = {}, i, j, it, sum, pc;
+  for(i=0;i<doc.items.length;i++){
+    it = doc.items[i];
+    if(it.kind === "raw" || it.allDay) continue;
+    sum = summaryOf(it);
+    pc = parseCourse(sum);
+    if(!divsByCourse[pc.course]) divsByCourse[pc.course] = {};
+    if(pc.div){ divsByCourse[pc.course][pc.div] = 1; divsSeen[pc.div] = 1; }
+  }
+  var split = {};
+  for(var c in divsByCourse){
+    var n = 0;
+    for(var d in divsByCourse[c]) n++;
+    if(n > 1) split[c] = 1;
+  }
+  var seen = 0;
+  for(var k in divsSeen) seen++;
+  return { split: split, bothDivisions: seen > 1 };
+}
+
+function summaryOf(it){
+  for(var i=0;i<it.lines.length;i++){
+    if(/^SUMMARY[;:]/i.test(it.lines[i])){
+      return it.lines[i].slice(it.lines[i].indexOf(":") + 1);
+    }
+  }
+  return "";
+}
+
+/* All-day markers collapse to three labels. Red vs White is the rotation
+   teachers actually track, so those stay distinct; holidays, exam days
+   and no-class days share one label because colouring forty of them
+   individually would be absurd. */
+function dayLabel(summary){
+  var s = String(summary || "").replace(/\\([,;\\\\])/g, "$1");
+  s = s.replace(/\s*\(RJHS\)\s*$/i, "").trim();
+  var low = s.toLowerCase();
+  if(low.indexOf("white day") === 0) return "White Day";
+  if(low.indexOf("red day") === 0)   return "Red Day";
+  return "School Calendar";
+}
+
+/* A category value may not contain a bare comma or semicolon — those are
+   the separators. Collapse them rather than escaping, so the name stays
+   readable in Outlook's category list. */
+function safeCategory(s){
+  return String(s).replace(/[,;]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/* The labels this event gets, most specific first — the first one is what
+   Outlook draws its colour from. Empty in one-label mode. */
+function leadLabels(it, labelMode, plan){
+  if(labelMode !== "class") return [];
+  var sum = summaryOf(it);
+  if(it.allDay) return [dayLabel(sum)];
+  var pc = parseCourse(sum);
+  var name = plan.split[pc.course] && pc.div
+    ? pc.course + " (" + pc.div + ")"
+    : pc.course;
+  var out = [name];
+  /* Only worth carrying when the file actually spans both divisions —
+     otherwise every event would gain a label that separates nothing. */
+  if(plan.bothDivisions && pc.div && DIVISION_NAME[pc.div]) out.push(DIVISION_NAME[pc.div]);
+  return out;
+}
+
+function buildCleaned(doc, mode, stamp, labelMode){
   var out = [];
   var changed = 0, already = 0, removed = 0, timedKept = 0, allDayKept = 0, skipped = 0;
   if(stamp === undefined) stamp = makeStamp();
+  var labels = {}, order = [];
+  var plan = labelPlan(doc);
+  function tally(name){
+    if(!name) return;
+    if(!labels[name]){ labels[name] = 0; order.push(name); }
+    labels[name]++;
+  }
 
   for(var i=0;i<doc.items.length;i++){
     var it = doc.items[i];
     if(it.kind === "raw"){ out.push(it.line); continue; }
-    if(!it.allDay){ timedKept++; pushAll(out, applyStamp(it.lines, stamp)); continue; }
+    var lead = leadLabels(it, labelMode, plan);
+    if(!it.allDay){ timedKept++; tally(lead[0]); pushAll(out, applyStamp(it.lines, stamp, lead)); continue; }
     if(mode === "strip"){ removed++; continue; }
     allDayKept++;
+    tally(lead[0]);
 
     /* Locate END:VEVENT. If the block was never terminated the file is
        truncated; pass it through untouched rather than guessing where a
        property belongs. */
-    var lines = applyStamp(it.lines, stamp), at = -1;
+    var lines = applyStamp(it.lines, stamp, lead), at = -1;
     for(var j=lines.length-1;j>=1;j--){
       if(/^END:VEVENT\s*$/i.test(lines[j])){ at = j; break; }
     }
@@ -1270,8 +1560,13 @@ function buildCleaned(doc, mode, stamp){
   while(out.length && out[out.length-1] === "") out.pop();
   var text = out.join("\r\n") + "\r\n";
 
+  var labelList = [];
+  for(var n=0;n<order.length;n++) labelList.push({ name:order[n], count:labels[order[n]] });
+  labelList.sort(function(a,b){ return b.count - a.count; });
+
   return { text:text, changed:changed, already:already, removed:removed,
-           timedKept:timedKept, allDayKept:allDayKept, skipped:skipped, stamp:stamp };
+           timedKept:timedKept, allDayKept:allDayKept, skipped:skipped,
+           stamp:stamp, labels:labelList };
 }
 function pushAll(target, arr){ for(var i=0;i<arr.length;i++) target.push(arr[i]); }
 
@@ -1404,8 +1699,8 @@ function init(){
         "</b> of them are all-day events that would mark you busy for the whole day.");
     }
 
-    if(!ad.length){ hide($("modes")); $("btnRun").textContent = "Prepare my file anyway"; }
-    else{ show($("modes")); $("btnRun").textContent = "Clean my file"; }
+    if(!ad.length){ hide($("modesBlock")); $("btnRun").textContent = "Prepare my file anyway"; }
+    else{ show($("modesBlock")); $("btnRun").textContent = "Clean my file"; }
 
     markDone("sec1","num1"); markDone("sec2","num2");
     show($("sec3"));
@@ -1514,7 +1809,10 @@ function init(){
   var cards = document.querySelectorAll(".path-card");
   for(var c=0;c<cards.length;c++){
     cards[c].addEventListener("click", function(){
-      for(var k=0;k<cards.length;k++) cards[k].classList.remove("is-selected");
+      /* Scope the highlight to this question's own grid — the page now has
+         two independent choices side by side. */
+      var sibs = this.parentNode.querySelectorAll(".path-card");
+      for(var k=0;k<sibs.length;k++) sibs[k].classList.remove("is-selected");
       this.classList.add("is-selected");
     });
   }
@@ -1523,7 +1821,9 @@ function init(){
   $("btnRun").addEventListener("click", function(){
     var checked = document.querySelector('input[name="mode"]:checked');
     var mode = checked ? checked.value : "free";
-    var res = buildCleaned(parsed, mode);
+    var lchecked = document.querySelector('input[name="labelMode"]:checked');
+    var labelMode = lchecked ? lchecked.value : "one";
+    var res = buildCleaned(parsed, mode, undefined, labelMode);
     cleanedText = res.text;
 
     var desc;
@@ -1540,6 +1840,31 @@ function init(){
     }
     if(res.skipped) desc += " "+res.skipped+" incomplete event(s) were passed through untouched.";
 
+    /* List the labels this run created, so nobody has to go hunting in
+       Outlook to find out what there is to colour. */
+    var labelHtml = "";
+    if(res.labels && res.labels.length){
+      var li = "";
+      for(var L=0;L<res.labels.length;L++){
+        li += '<li>'+esc(res.labels[L].name)+'<span class="lc">'+res.labels[L].count+'</span></li>';
+      }
+      labelHtml =
+        '<div class="label-list">'+
+          '<div class="opt-label" style="margin-top:0">Labels created &mdash; colour these in Outlook</div>'+
+          '<ul>'+li+'</ul>'+
+          '<p class="tip">Every event also carries <code>MyRJ Import</code> and <code>'+esc(res.stamp)+
+          '</code> for finding and deleting this batch later. Colour the labels above, not those two.</p>'+
+        '</div>';
+    }else{
+      labelHtml =
+        '<div class="label-list">'+
+          '<div class="opt-label" style="margin-top:0">Labels created &mdash; colour this in Outlook</div>'+
+          '<ul><li>MyRJ Import<span class="lc">all</span></li></ul>'+
+          '<p class="tip">Each event also carries <code>'+esc(res.stamp)+
+          '</code> so you can find and delete this batch specifically. Colour <code>MyRJ Import</code> &mdash; it never changes, so next semester\'s import arrives already coloured.</p>'+
+        '</div>';
+    }
+
     $("result").innerHTML =
       '<div class="download-panel">'+
         '<div class="download-info">'+
@@ -1547,11 +1872,11 @@ function init(){
           '<div class="download-desc">'+desc+'</div>'+
         '</div>'+
         '<button class="btn" id="btnDl" type="button">Download .ics</button>'+
-      '</div>';
+      '</div>'+ labelHtml;
     $("btnDl").addEventListener("click", downloadFile);
 
     /* Show the label that makes these events findable later. */
-    var tags = document.querySelectorAll(".stamp-name");
+    var tags = document.querySelectorAll(".stamp-dyn");
     for(var s=0;s<tags.length;s++) tags[s].textContent = res.stamp;
 
     markDone("sec3","num3");
