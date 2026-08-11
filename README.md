@@ -101,6 +101,26 @@ local.
 transmitted.** The page makes zero external requests and works with the network
 unplugged.
 
+## The page itself
+
+The instructions are not incidental to this tool; for most teachers they *are* the tool. Written
+for a reader who has been burned by technology before, will not troubleshoot, and stops at the
+first screen that doesn't match the page:
+
+- **Four steps, not three.** Subscribing to the live feed is Step 5 in its own right, not a
+  footnote after the import. The README has always called it mandatory; the page now agrees.
+- **Both download routes are described.** *Open in a new tab* and *Copy link* behave differently
+  and the copy used to describe only the second. The output filename is editable before download,
+  so the browser's silent naming stops mattering.
+- **Drawn, never captured** — inline SVG with live text, nothing to 404, crisp at any zoom,
+  renders offline. Now six figures: the MyRJ toolbar, the feed dialog, the right-click menu, a
+  finished download, Outlook's Add calendar pane, and Outlook's category colour picker.
+- **The main-calendar trade is stated.** Importing into a calendar of its own is trivial to
+  delete later but doesn't make you look busy, which is the point of importing. The page says so
+  once and the removal section no longer contradicts it.
+- **Print stylesheet.** The job spans two applications, so the steps have to survive being
+  printed: collapsed explainers open, interactive panels drop out, figures stay.
+
 ## Constraints
 
 Single `index.html`. Inline CSS and JS. No build step, no framework, no external
@@ -111,6 +131,12 @@ Design system matches Raider Quiz Builder: Raider Red `#C11430` on neutral greys
 3px radii, IBM Plex Mono for numerals and labels (with a local fallback stack — no
 webfont is loaded), `[data-theme="dark"]` toggle with `localStorage` persistence.
 
+## Verified in Outlook
+
+The manual check is done, on a real mailbox: the cleaned file imports, the all-day Red/White
+markers land in the all-day band **without blocking the day**, and timed class blocks still read
+busy. Both Outlooks were checked — see the colour finding below for the one way they differ.
+
 ## Known limits
 
 - **Snapshot, not sync — and the failure mode is worse than staleness.** Redo each
@@ -120,13 +146,19 @@ webfont is loaded), `[data-theme="dark"]` toggle with `localStorage` persistence
   must also hold a live subscription to the same feed, with the subscription as the
   tie-breaker.
 - **The Schedule feed only emits a day-type marker on days you have something
-  scheduled.** A teacher with a free Tuesday gets no Red/White marker for it.
-- **Windows / desktop Outlook assumed.** Mac and mobile paths are untested.
+  scheduled.** A teacher with a free Tuesday gets no Red/White marker for it. Surfaced on the
+  page under "Things that look wrong but aren't," because it reads as a failed import.
+- **Windows / desktop Outlook assumed.** Mac and mobile paths are untested. The page says so
+  out loud now, in Step 1, along with the Ctrl-click / two-finger-click gesture — a teacher on a
+  Mac previously hit a dead end at "right-click" with no way forward.
 - **Blackbaud could change the feed format** without notice. The `VALUE=DATE`
   discriminator is stable iCalendar; the `(RJHS)` suffixes and title patterns are not —
   no logic is built on titles.
 - **Feed window is past 2 months + next 12 months.** Changes take up to an hour to reach
-  the feed; Outlook refreshes subscriptions every 3–4 hours.
+  the feed; Outlook refreshes subscriptions every 3–4 hours. Both are now stated on the page:
+  the window explains "only about a year of schedule," and the refresh lag qualifies the
+  otherwise-absolute advice to trust the subscription — on the morning of a weather delay it may
+  still be catching up, so MyRJ itself is the only live copy.
 
 ## Which feed to use
 
@@ -156,13 +188,13 @@ npm install playwright && node test/e2e.js Schedule.ics                       # 
 ```
 
 - **`verify.js`** — derives every expectation from an independent scan of whatever file it's
-  given, so it works on any feed. 34 checks per file: transform correctness in both modes,
+  given, so it works on any feed. 53 checks per file: transform correctness in both modes,
   byte-for-byte preservation of timed events and folded lines, `LOCATION`/`DESCRIPTION`/`SUMMARY`
   counts, UID order, CRLF, 75-octet conformance, idempotency across three runs, and BOM/LF inputs.
-- **`acceptance.js`** — 93 checks: every row of the spec's acceptance table, truncated-file and
+- **`acceptance.js`** — 137 checks: every row of the spec's acceptance table, truncated-file and
   ordering edge cases, `webcal://` → `https://` conversion, plus assertions that the design system
   matches Raider Quiz Builder token-for-token and that the page requests nothing external.
-- **`e2e.js`** — 25 checks in real Chromium: pastes a real feed link, verifies the live conversion
+- **`e2e.js`** — 40 checks in real Chromium: pastes a real feed link, verifies the live conversion
   and clipboard, uploads the export, captures the actual download, and asserts that **zero external
   requests** are attempted (they're blocked and recorded, not merely observed).
 
@@ -187,6 +219,28 @@ Step 2 is the part nobody knows about, and it's what makes this tractable. These
 standalone always-visible `#remove` section, linked from the top of the page — not inside a
 workflow step that is hidden until you have run the tool, which is where they were through v1.2
 and where nobody returning a semester later could find them.
+
+### Finding: the two Outlooks colour an import differently
+
+Confirmed on a real mailbox, same cleaned file, same account, side by side:
+
+- **Classic Outlook** draws every imported event in the **calendar's own colour**, exactly like
+  everything else in that calendar. The categories are present and still do their job for
+  finding and deleting; they simply don't affect how anything looks.
+- **New Outlook and the web** draw an event in the colour of its **first category**. A category
+  the mailbox has never seen arrives with no colour, so the import renders **grey** next to the
+  user's own colour-coded events.
+
+Category *names* travel inside an `.ics`; category *colours* live only in the reader's mailbox,
+which is why nothing the tool writes can fix this at the file level. What the tool can do is
+guarantee a **stable** first category to colour — hence `MyRJ Import` never changing, and the
+per-class labels being written first when that mode is chosen.
+
+Practical consequence, and it belongs in the user-facing copy rather than only here: a teacher in
+classic Outlook needs to do nothing, and a teacher in new Outlook has a one-time
+**Settings → Accounts → Categories → edit → pick a colour** to do. Reported from the field as
+"it imports but doesn't take the calendar colour," which sounds like a broken import and isn't
+one.
 
 ### Finding: Blackbaud regenerates UIDs on every export
 

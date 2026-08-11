@@ -182,7 +182,7 @@
 
   .workflow-steps {
     display: grid;
-    grid-template-columns: 1fr auto 1fr auto 1fr;
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
     align-items: center;
     gap: 1rem;
   }
@@ -205,9 +205,14 @@
   .workflow-step .step-detail { font-size: 0.82rem; color: var(--text-mute); margin-top: 0.15rem; line-height: 1.4; }
   .workflow-arrow { color: var(--text-dim); width: 18px; height: 18px; flex-shrink: 0; }
 
+  @media (max-width: 1000px) {
+    .workflow-steps { grid-template-columns: 1fr auto 1fr; }
+    .workflow-steps .workflow-arrow.wrap-hide { display: none; }
+  }
   @media (max-width: 760px) {
     .workflow-steps { grid-template-columns: 1fr; gap: 0.85rem; }
     .workflow-arrow { transform: rotate(90deg); margin: 0 auto; }
+    .workflow-steps .workflow-arrow.wrap-hide { display: block; }
   }
 
   /* ===== Sections ===== */
@@ -450,6 +455,34 @@
   .converted .c-actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
   .converted .c-note { color: var(--text-mute); font-size: 0.9rem; margin-top: 1rem; }
   .converted .c-note b { color: var(--text); font-weight: 500; }
+  .c-note-lead { color: var(--text); font-weight: 500; margin-bottom: 0.75rem; }
+  .route {
+    border-left: 2px solid var(--border-strong);
+    padding: 0 0 0 0.9rem;
+    margin-bottom: 0.9rem;
+  }
+  .route .r-head { color: var(--text); font-weight: 600; margin-bottom: 0.2rem; }
+  .route .r-tag {
+    display: inline-block;
+    font-family: "IBM Plex Mono", "Consolas", "Courier New", monospace;
+    font-size: 0.62rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--raider); background: var(--raider-tint);
+    border-radius: 2px; padding: 1px 6px; margin-right: 0.5rem; vertical-align: 1px;
+  }
+  .route .r-body { line-height: 1.55; }
+  .r-foot { color: var(--text-dim); font-size: 0.85rem; margin-top: 0.9rem; }
+  .validation.helpline { margin-bottom: 2rem; }
+  .name-row {
+    display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    margin-top: 0.9rem; font-size: 0.88rem; color: var(--text-mute);
+  }
+  .name-row input {
+    font-family: "IBM Plex Mono", "Consolas", "Courier New", monospace;
+    font-size: 0.85rem; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border-strong);
+    border-radius: 3px; padding: 0.35rem 0.5rem; min-width: 220px; flex: 1;
+  }
+  .name-row input:focus { outline: none; border-color: var(--raider); }
 
   .copy-feedback { color: var(--raider); font-size: 0.9rem; opacity: 0; transition: opacity 0.2s; }
   .copy-feedback.show { opacity: 1; }
@@ -686,6 +719,30 @@
     .path-card .path-title { padding-right: 0; }
     .path-card .path-badge { position: static; display: inline-block; margin-bottom: 0.5rem; }
   }
+
+  /* ===== Print: the steps on paper, next to the keyboard =====
+     Teachers doing this for the first time move between two applications, so
+     the page has to survive being printed and followed by hand. Everything
+     interactive comes out; every collapsed explanation goes in. */
+  @media print {
+    .site-header, .theme-toggle, .watermark, .workflow-strip,
+    .url-row, .converted .c-actions, .dropzone, .action-row,
+    .download-panel, .name-row, .resources, .site-footer,
+    .validation.helpline, #urlMsg, #fileMsg, #stats { display: none !important; }
+
+    .section.is-hidden { display: block !important; }
+    details > *:not(summary) { display: block !important; }
+    details > summary { font-weight: 600; margin-bottom: 0.4rem; }
+    .peek { display: none !important; }
+
+    html, body { background: #ffffff; color: #000000; }
+    main { max-width: 100%; padding: 0; }
+    a { color: #000000; text-decoration: underline; }
+    .section { border-top: 1px solid #999999; }
+    .section, figure, .validation, .route, ol, ul { break-inside: avoid; page-break-inside: avoid; }
+    .dialog-svg { max-width: 96%; }
+    h2 { break-after: avoid; page-break-after: avoid; }
+  }
 </style>
 </head>
 <body>
@@ -700,10 +757,10 @@
     </div>
   </div>
   <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
-    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
     </svg>
-    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="4"/>
       <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
     </svg>
@@ -718,7 +775,7 @@
   <div class="contrast">
     <div class="contrast-col before">
       <div class="c-head">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
         Import it as-is
       </div>
       <div class="c-line">Busy 12:00 AM &ndash; 11:59 PM, every school day</div>
@@ -726,7 +783,7 @@
     </div>
     <div class="contrast-col after">
       <div class="c-head">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
         Clean it here first
       </div>
       <div class="c-line">Only your actual classes show as busy</div>
@@ -736,11 +793,20 @@
 
   <p class="lead lead-cta">
     Start with <a href="#sec1">Step 1</a> below. Already have your <code>.ics</code> file? <a href="#sec2">Skip to the drop zone.</a> Need to undo an earlier import? <a href="#remove">Removing a past import.</a><br>
-    Takes about a minute, and <strong>everything runs in your browser &mdash; nothing is uploaded.</strong>
+    <strong>You can't break anything here.</strong> This page only makes a tidied copy of a file on your own computer. It cannot change MyRJ, it cannot touch anyone else's calendar, and everything runs in your browser &mdash; nothing is uploaded.<br>
+    <strong>Do this on a computer</strong>, not an iPad or a phone &mdash; the steps need a right-click and a file, and Outlook's mobile app can't import. Cleaning the file takes about a minute; give yourself ten or fifteen for the whole job the first time.
   </p>
 
+  <div class="validation success helpline">
+    <div class="v-header">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.1 9.1 0 0 1-4-.9L3 20l1.4-4.2A8.4 8.4 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>
+      Stuck at any point? That's normal &mdash; ask
+    </div>
+    <div class="v-summary">Email <a href="mailto:jbeyer@regisjesuit.com?subject=MyRJ%20Schedule%20Cleaner%20%E2%80%94%20stuck">Jason Beyer</a> with a screenshot of whatever is on your screen. That's almost always enough to sort it out, and you don't need to be able to describe the problem.</div>
+  </div>
+
   <section class="workflow-strip">
-    <div class="workflow-label">How this works &mdash; three steps</div>
+    <div class="workflow-label">How this works &mdash; four steps</div>
     <div class="workflow-steps">
       <div class="workflow-step">
         <div class="step-num">1</div>
@@ -749,7 +815,7 @@
           <div class="step-detail">Copy your Schedule feed link and download the <code>.ics</code></div>
         </div>
       </div>
-      <svg class="workflow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      <svg class="workflow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       <div class="workflow-step">
         <div class="step-num">2</div>
         <div class="step-content">
@@ -757,12 +823,20 @@
           <div class="step-detail">Day markers stop blocking time &mdash; and you choose one colour or one per class</div>
         </div>
       </div>
-      <svg class="workflow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      <svg class="workflow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       <div class="workflow-step">
         <div class="step-num">3</div>
         <div class="step-content">
           <div class="step-title">Import into Outlook</div>
-          <div class="step-detail">Add calendar &rarr; Upload from file &rarr; your own calendar</div>
+          <div class="step-detail">Add calendar &rarr; Upload from file &rarr; your main calendar</div>
+        </div>
+      </div>
+      <svg class="workflow-arrow wrap-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      <div class="workflow-step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">Subscribe as well</div>
+          <div class="step-detail">The import blocks your time; the subscription keeps you right when the schedule changes</div>
         </div>
       </div>
     </div>
@@ -789,21 +863,21 @@
     <div class="toolbar-hint">
       <div class="tb" aria-hidden="true">
         <span class="tb-btn tb-list">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
           List
         </span>
         <span class="tb-sep"></span>
         <span class="tb-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h13M3 12h13M3 17h9"/><path d="M17 4l4 3-4 3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h13M3 12h13M3 17h9"/><path d="M17 4l4 3-4 3"/></svg>
         </span>
         <span class="tb-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h14M3 11h10M3 16h6"/><path d="M18 10v9M15 16l3 3 3-3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h14M3 11h10M3 16h6"/><path d="M18 10v9M15 16l3 3 3-3"/></svg>
         </span>
         <span class="tb-btn tb-target">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="5.5" cy="18.5" r="1.7" fill="currentColor" stroke="none"/><path d="M4 11.5a8.5 8.5 0 0 1 8.5 8.5"/><path d="M4 4.5A15.5 15.5 0 0 1 19.5 20"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="5.5" cy="18.5" r="1.7" fill="currentColor" stroke="none"/><path d="M4 11.5a8.5 8.5 0 0 1 8.5 8.5"/><path d="M4 4.5A15.5 15.5 0 0 1 19.5 20"/></svg>
         </span>
         <span class="tb-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
         </span>
       </div>
       <div class="tb-caption">
@@ -878,8 +952,43 @@
 
     <ol start="3">
       <li>Expand <b>Individual Filter Feeds</b></li>
-      <li><b>Right-click</b> the feed you want and choose <b>Copy Link Address</b></li>
+      <li><b>Right-click</b> the feed you want and choose <b>Copy Link Address</b> &mdash; your browser may word it slightly differently, so see the picture below</li>
     </ol>
+
+    <figure class="dialog-mock">
+      <svg class="dialog-svg" viewBox="0 0 604 286" role="img" aria-labelledby="ctxTitle ctxDesc" xmlns="http://www.w3.org/2000/svg">
+      <title id="ctxTitle">The right-click menu on a feed link</title>
+      <desc id="ctxDesc">A feed row reading Schedule with a right-click menu open beneath it. The menu lists Open link in new tab, Open link in new window, Save link as, and Copy link address, with Copy link address highlighted and outlined in red.</desc>
+      <g font-family="Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif">
+      <rect x="0.5" y="0.5" width="603" height="285" rx="3" fill="#ffffff" stroke="#c9c9c9"/>
+
+      <text x="32" y="40" font-size="14.5" fill="#333333">Schedule:</text>
+      <text x="226" y="40" font-size="14.5" fill="#3a6ea5" text-decoration="underline">Schedule</text>
+      <rect x="220.5" y="24.5" width="86" height="22" rx="2" fill="none" stroke="#C11430" stroke-width="1.6"/>
+
+      <text x="32" y="74" font-size="14.5" fill="#333333">Games/Practices:</text>
+      <text x="226" y="74" font-size="14.5" fill="#3a6ea5" text-decoration="underline">Games/Practices</text>
+
+      <rect x="243" y="55" width="266" height="206" rx="3" fill="#ffffff" stroke="#c9c9c9" stroke-width="1"/>
+      <text x="259" y="80" font-size="13.5" fill="#333333">Open link in new tab</text>
+      <text x="259" y="106" font-size="13.5" fill="#333333">Open link in new window</text>
+      <text x="259" y="132" font-size="13.5" fill="#333333">Open link in incognito window</text>
+      <path d="M251 148h250" stroke="#e2e2e2" stroke-width="1"/>
+      <text x="259" y="172" font-size="13.5" fill="#333333">Save link as&hellip;</text>
+      <rect x="244" y="182" width="264" height="30" fill="#f0f0f0"/>
+      <text x="259" y="202" font-size="13.5" fill="#1a1a1a" font-weight="600">Copy link address</text>
+      <rect x="244" y="182" width="264" height="30" fill="none" stroke="#C11430" stroke-width="2"/>
+      <path d="M251 222h250" stroke="#e2e2e2" stroke-width="1"/>
+      <text x="259" y="246" font-size="13.5" fill="#333333">Inspect</text>
+
+      <path d="M243 36l0 26 7-7 5 10 5-2-5-10 9-1z" fill="#1a1a1a" stroke="#ffffff" stroke-width="1.2"/>
+      </g>
+    </svg>
+      <figcaption class="tb-caption">
+        <span class="tb-arrow">&uarr;</span>
+        <span>The menu that appears. Chrome and Edge say <b>Copy link address</b>; Firefox and Safari just say <b>Copy Link</b> &mdash; any of them is the right one. Don't pick <b>Save link as</b>.</span>
+      </figcaption>
+    </figure>
 
     <div class="feed-label">Use a feed from &ldquo;My Calendars&rdquo;</div>
     <ul class="feed-list">
@@ -892,7 +1001,7 @@
 
     <div class="validation error">
       <div class="v-header">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
         Not &ldquo;School Calendars&rdquo;
       </div>
       <div class="v-summary">Further down that page is a separate <b>School Calendars</b> section. Those are the whole school's calendars &mdash; roughly <b>1,700 events</b>, nearly all of them other people's games, practices, and meetings. Importing one buries your own schedule and marks you busy for things you aren't attending. Stay in the <b>My Calendars</b> section.</div>
@@ -900,10 +1009,18 @@
 
     <div class="validation warning">
       <div class="v-header">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
         Right-click, don't left-click
       </div>
       <div class="v-summary">Left-clicking hands the link to Windows, which asks which app should open it and then passes a broken version to Outlook &mdash; that's the &ldquo;Invalid URL&rdquo; error.</div>
+    </div>
+
+    <div class="validation warning">
+      <div class="v-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+        On a Mac
+      </div>
+      <div class="v-summary">These directions were written and tested on Windows. The cleaning part of this page works the same everywhere &mdash; but to open that menu on a Mac, <b>hold Ctrl and click</b>, or <b>click with two fingers</b> on the trackpad. Outlook for Mac also arranges its menus differently from the pictures further down, so the wording won't always match. If you get stuck, <a href="mailto:jbeyer@regisjesuit.com?subject=MyRJ%20Schedule%20Cleaner%20%E2%80%94%20Mac">send a screenshot</a> rather than guessing.</div>
     </div>
   </section>
 
@@ -911,6 +1028,15 @@
   <section class="section" id="sec2">
     <div class="section-h"><div class="step-num" id="num2">2</div><h2>Load your calendar file</h2></div>
     <p>Paste the link you just copied. It starts with <code>webcal://</code>, which Windows hands to the wrong app &mdash; so this converts it to <code>https://</code> for you.</p>
+
+    <details class="explainer">
+      <summary>Why can't this page just download the file for me?</summary>
+      <div class="e-body">
+        <p>Because that link is effectively a password to your schedule. Anyone holding it can read your whole calendar &mdash; there's no sign-in on it.</p>
+        <p>For a page like this one to fetch the file directly, MyRJ would have to permit it, and it doesn't. The usual workaround is to bounce the request through somebody else's server, and that would mean a hundred teachers' schedule links passing through a machine nobody here controls. That's not a trade worth making to save you one click, so the download stays between you, MyRJ and your own browser.</p>
+        <p>It also means this page never sees your link or your calendar. Once the file is on your computer, everything below happens inside this browser tab, with the network unplugged if you like.</p>
+      </div>
+    </details>
     <div class="url-row">
       <input type="text" id="url" aria-label="MyRJ feed link" placeholder="webcal://regisjesuit.myschoolapp.com/podium/feed/iCal.aspx?z=..." autocomplete="off" spellcheck="false">
       <button class="btn" id="btnFetch" type="button">Convert link</button>
@@ -928,16 +1054,79 @@
         <span class="copy-feedback" id="copyFb">Copied to clipboard</span>
       </div>
       <div class="c-note">
-        Paste it into a new browser tab and press Enter. Your browser will ask where to save the file &mdash;
-        <b>name it after the feed you copied.</b> If you copied the <b>Schedule</b> feed, call it <code>Schedule</code>.
-        MyRJ offers several feeds and the browser's suggested name (often <code>MyCalendars</code>) won't tell you which one you got.
-        This tool names your cleaned file to match, so <code>Schedule</code> comes back as <code>Schedule-clean.ics</code>.
+        <div class="c-note-lead">Two ways to get the file. Either is fine &mdash; pick one.</div>
+
+        <div class="route">
+          <div class="r-head"><span class="r-tag">Easiest</span> Open in a new tab</div>
+          <div class="r-body">The file downloads straight away. Most browsers won't ask you anything &mdash; a tab flickers open and closed and the file lands in your <b>Downloads</b> folder, usually called <code>MyCalendars.ics</code> whichever feed you copied. <b>If it looks like nothing happened, that's what happened.</b> Check Downloads.</div>
+        </div>
+
+        <div class="route">
+          <div class="r-head"><span class="r-tag">If you'd rather name it yourself</span> Copy link</div>
+          <div class="r-body">Paste it into a new browser tab and press Enter. Some browsers then ask where to save the file &mdash; that's your chance to <b>name it after the feed you copied</b>, so call the <b>Schedule</b> feed <code>Schedule</code> rather than accepting <code>MyCalendars</code>. Plenty of browsers never ask. That's fine too.</div>
+        </div>
+
+        <div class="r-foot">Either way, the name isn't important: you can rename the cleaned file before you download it at the end.</div>
+      </div>
+
+
+    <figure class="dialog-mock">
+      <svg class="dialog-svg" viewBox="0 0 604 232" role="img" aria-labelledby="dlTitle dlDesc" xmlns="http://www.w3.org/2000/svg">
+      <title id="dlTitle">What a finished download looks like</title>
+      <desc id="dlDesc">A browser window with a downloads panel open in the top right showing MyCalendars.ics as a recent download, and below it the same file shown in the Downloads folder.</desc>
+      <g font-family="Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif">
+      <rect x="0.5" y="0.5" width="603" height="231" rx="3" class="ol-main" stroke="var(--ol-border)"/>
+      <rect x="0.5" y="0.5" width="603" height="36" class="ol-side"/>
+      <path d="M0 36.5h604" class="ol-line"/>
+      <circle cx="20" cy="18" r="4" fill="var(--ol-mute)"/>
+      <circle cx="34" cy="18" r="4" fill="var(--ol-mute)"/>
+      <circle cx="48" cy="18" r="4" fill="var(--ol-mute)"/>
+      <rect x="68.5" y="8.5" width="420" height="20" rx="10" class="ol-field" stroke-width="1"/>
+      <text x="80" y="23" font-size="11.5" class="ol-mute">regisjesuit.myschoolapp.com/podium/feed/iCal.aspx?z=&hellip;</text>
+      <g transform="translate(553 10) scale(0.72)" fill="none" stroke="var(--raider)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5L12 15l4.5-4.5M4 19h16"/></g>
+
+      <rect x="336" y="48" width="252" height="74" rx="3" class="ol-field" stroke-width="1"/>
+      <text x="352" y="70" font-size="12" font-weight="600" class="ol-text">Recent downloads</text>
+      <g transform="translate(352 82) scale(0.8)" fill="none" stroke="var(--ol-mute)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7l-4-4zM14 3v4h4"/></g>
+      <text x="378" y="94" font-size="12.5" class="ol-text">MyCalendars.ics</text>
+      <text x="378" y="110" font-size="11" class="ol-mute">Done &middot; 34 KB</text>
+      <rect x="334" y="46" width="256" height="78" rx="4" fill="none" class="ol-ring" stroke-width="2"/>
+
+      <text x="24" y="70" font-size="12.5" class="ol-mute">&hellip;or find it yourself:</text>
+      <rect x="24.5" y="84.5" width="280" height="122" rx="3" class="ol-field" stroke-width="1"/>
+      <rect x="24.5" y="84.5" width="280" height="28" class="ol-side"/>
+      <g transform="translate(38 90) scale(0.6)" fill="none" stroke="var(--ol-mute)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6l2 2h10v10H3z"/></g>
+      <text x="58" y="103" font-size="12.5" font-weight="600" class="ol-text">Downloads</text>
+      <path d="M24 112.5h281" class="ol-line" stroke-width="1"/>
+      <rect x="26" y="118" width="277" height="26" class="ol-btn" stroke="none"/>
+      <g transform="translate(38 123) scale(0.68)" fill="none" stroke="var(--raider)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7l-4-4zM14 3v4h4"/></g>
+      <text x="58" y="136" font-size="12.5" font-weight="600" class="ol-text">MyCalendars.ics</text>
+      <text x="232" y="136" font-size="11" class="ol-mute">just now</text>
+      <g transform="translate(38 152) scale(0.68)" fill="none" stroke="var(--ol-mute)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7l-4-4zM14 3v4h4"/></g>
+      <text x="58" y="165" font-size="12.5" class="ol-mute">Faculty Handbook.pdf</text>
+      <g transform="translate(38 181) scale(0.68)" fill="none" stroke="var(--ol-mute)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7l-4-4zM14 3v4h4"/></g>
+      <text x="58" y="194" font-size="12.5" class="ol-mute">Rosters.xlsx</text>
+      </g>
+    </svg>
+      <figcaption class="tb-caption">
+        <span class="tb-arrow">&uarr;</span>
+        <span>This is all &ldquo;it worked&rdquo; looks like &mdash; no confirmation, no dialog. Sort your <b>Downloads</b> folder by date and take the newest <code>.ics</code>. Your browser's downloads button is somewhere along its top or bottom edge; the picture won't match yours exactly.</span>
+      </figcaption>
+    </figure>
+
+      <div class="validation success">
+        <div class="v-header">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17M12 3c2.5 2.4 3.8 5.5 3.8 9S14.5 18.6 12 21c-2.5-2.4-3.8-5.5-3.8-9S9.5 5.4 12 3z"/></svg>
+          While you have this link &mdash; subscribe to it as well
+        </div>
+        <div class="v-summary">Ten seconds, and it's the half of this that keeps you <i>right</i>. In Outlook: <b>Add calendar</b> &rarr; <b>Subscribe from web</b> &rarr; paste the same link above &rarr; <b>Import</b>. A subscription updates itself when the Academic Office changes something; the file you're about to clean never will. You want both, and <a href="#sec5">Step 5</a> explains why.</div>
       </div>
     </div>
 
     <div id="dropArea" class="hidden">
+
       <div class="dropzone" id="drop" tabindex="0" role="button" aria-label="Drop your .ics file here or click to browse">
-        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
         <div class="primary-text">Drop your .ics file here</div>
         <div class="secondary-text">or <span class="browse-link">browse</span> &mdash; look in Downloads for the newest <code>.ics</code></div>
       </div>
@@ -969,7 +1158,7 @@
     </div>
 
     <div class="opt-label">How do you want to colour them in Outlook?</div>
-    <p class="opt-help">Outlook colours calendar events by label, and you choose the colours yourself once the file is imported. What you pick here decides <b>how many colours you get to choose</b>.</p>
+    <p class="opt-help">Outlook colours calendar events by label &mdash; it calls them <b>categories</b>, and that's the word you'll see in its menus, so treat the two as the same thing. You choose the colours yourself once the file is imported. What you pick here decides <b>how many colours you get to choose</b>.</p>
     <div class="path-grid" id="labelModes">
       <label class="path-card is-selected" id="labelOne">
         <input type="radio" name="labelMode" value="one" checked>
@@ -980,7 +1169,7 @@
       <label class="path-card" id="labelClass">
         <input type="radio" name="labelMode" value="class">
         <span class="path-title">A colour for each class</span>
-        <span class="path-desc">Each course gets its own label, and Red days, White days and holidays get theirs. You pick <b>a colour for each one</b>, so your week reads at a glance. Every section of a course shares a label &mdash; you colour a prep, not a period. Teach the same course in both divisions and those split into <code>(BD)</code> and <code>(GD)</code>.</span>
+        <span class="path-desc">Each course gets its own label, and Red days, White days and holidays get theirs. You pick <b>a colour for each one</b>, so your week reads at a glance. Every section of a course shares a label &mdash; you colour a prep, not a period. Teach the same course in both divisions and those split into <code>(BD)</code> and <code>(GD)</code>. Worth knowing: that's usually six to nine labels to colour by hand in Outlook, one at a time. The exact list appears after you clean the file.</span>
       </label>
     </div>
 
@@ -997,27 +1186,26 @@
     <div class="section-h"><div class="step-num" id="num4">4</div><h2>Download and import</h2></div>
     <div id="result"></div>
 
-    <p><b>Then, in Outlook:</b></p>
+    <p><b>Then, in Outlook:</b> <span class="h-tag">New Outlook &amp; Outlook on the web</span></p>
     <ol>
       <li><b>Add calendar</b> &rarr; <b>Upload from file</b></li>
       <li>Browse to the file you just downloaded</li>
-      <li>Set the <b>Add to</b> dropdown &mdash; the box under the file name &mdash; to a calendar <b>you already own</b>, not a new one</li>
+      <li>Set the <b>Add to</b> dropdown &mdash; the box under the file name &mdash; to your <b>main calendar</b>, the one Outlook made for you. Not a new one, and not a calendar you added yourself.</li>
       <li><b>Add to calendar</b></li>
     </ol>
+    <p class="tip">In <b>classic Outlook</b> the same job lives under <b>File</b> &rarr; <b>Open &amp; Export</b> &rarr; <b>Import/Export</b> &rarr; <b>Import an iCalendar (.ics) file</b>, and when it asks, choose <b>Import</b> rather than Open as New.</p>
 
-
-    <div class="validation success">
+    <div class="validation warning">
       <div class="v-header">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.2"/><circle cx="17.5" cy="10.5" r="1.2"/><circle cx="8.5" cy="7.5" r="1.2"/><circle cx="6.5" cy="12.5" r="1.2"/><path d="M12 3a9 9 0 1 0 0 18c.8 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1-.3-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8z"/></svg>
-        Imported events look grey? Give the label a colour
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v15H4zM4 9h16M8 3v4M16 3v4"/><path d="M9 14h6"/></svg>
+        Why your main calendar, and what it costs you
       </div>
       <div class="v-summary">
-        <p>Outlook carries category <b>names</b> inside the file, but category <b>colours</b> live only in your own mailbox. Your imported events arrive tagged with categories Outlook has never seen, so it creates them with no colour &mdash; and an event with a colourless category is drawn grey instead of taking your calendar's colour.</p>
-        <p>One-time fix: <b>Settings</b> &rarr; <b>Accounts</b> &rarr; <b>Categories</b>, find the label, click the edit icon and pick a colour. Every event carrying it recolours at once. In classic Outlook it's <b>Categorize</b> &rarr; <b>All Categories</b> on any event.</p>
-        <p><b>Colour the labels listed above</b> &mdash; the ones this run created. If you chose one label for everything that's a single <code class="stamp-name">MyRJ Import</code>; if you chose a label per class it's one per course plus <code class="stamp-name">Red Day</code>, <code class="stamp-name">White Day</code> and <code class="stamp-name">School Calendar</code>. Leave the dated label alone: it exists for finding and deleting this batch later, not for colour.</p>
-        <p>These names don't change from semester to semester, so this is genuinely one-time. Next year's import lands already coloured.</p>
+        <p>Putting this in a calendar of its own is tidier and far easier to delete later &mdash; but a calendar you add yourself doesn't reliably tell colleagues you're busy, and being visibly busy is the entire reason for importing. So: <b>main calendar</b>, and accept that removing it later takes a few more steps than deleting a whole calendar would.</p>
+        <p>Those steps are written out in <a href="#remove"><b>Removing a past import</b></a>, they work, and the labels this tool adds are what make them quick. If you'd genuinely rather have easy deletion than busy time &mdash; some people only want the schedule visible on their phone &mdash; then a separate calendar is the better choice for you, and nothing else on this page changes.</p>
       </div>
     </div>
+
 
     <figure class="dialog-mock wide">
       <svg class="dialog-svg" viewBox="0 0 864 462" role="img" aria-labelledby="olTitle olDesc" xmlns="http://www.w3.org/2000/svg">
@@ -1073,25 +1261,108 @@
     </svg>
       <figcaption class="tb-caption">
         <span class="tb-arrow">&uarr;</span>
-        <span>The dialog you're aiming for. The <b>Add to</b> box is the one that matters &mdash; point it at a calendar you already own. Your Outlook's colours and accent will differ; the layout won't.</span>
+        <span>The dialog you're aiming for. The <b>Add to</b> box is the one that matters &mdash; point it at your main calendar. Your Outlook's colours and accent will differ; the layout won't.</span>
       </figcaption>
     </figure>
 
-    <div class="validation error">
+    <div class="validation success">
       <div class="v-header">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-        Read this before you rely on it
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1.2"/><circle cx="17.5" cy="10.5" r="1.2"/><circle cx="8.5" cy="7.5" r="1.2"/><circle cx="6.5" cy="12.5" r="1.2"/><path d="M12 3a9 9 0 1 0 0 18c.8 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1-.3-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8z"/></svg>
+        Not the colours you expected? That's the labels, not a bad import
       </div>
       <div class="v-summary">
-        <p><b>This is a snapshot, not a subscription &mdash; so keep your subscribed calendar too.</b></p>
-        <p>These events are now yours. They block your time and reach your phone. But they are frozen as of today. When the Academic Office changes something in MyRJ &mdash; a special schedule, or a one-hour late start called at 5:30am for weather &mdash; that change will <b>never</b> reach this imported copy. On a delay morning it won't just be out of date; it will be showing block times that are no longer real.</p>
-        <p>Subscribe to the same feed as well (<b>Add calendar &rarr; Subscribe from web</b>) and keep it visible. The import is what makes you look busy to colleagues; the subscription is what tells you the truth. <b>When they disagree, the subscribed one is right.</b></p>
+        <p>The two Outlooks colour events differently, and the same imported file looks different in each:</p>
+        <ul>
+          <li><b>Classic Outlook</b> &mdash; everything comes in the calendar's own colour, the same as the rest of that calendar. The labels are still there doing their job, they just don't change how anything looks.</li>
+          <li><b>New Outlook and the web</b> &mdash; an event takes its colour from its <b>first label</b> instead. So your imported schedule can arrive in colours you didn't choose, or in grey where the label has no colour yet.</li>
+        </ul>
+        <p>Nothing is wrong with the file either way. If you want to decide the colours yourself: <b>Settings</b> &rarr; <b>Accounts</b> &rarr; <b>Categories</b>, find the label, click the edit icon and pick a colour. Every event carrying it changes at once. In classic Outlook the same list is under <b>Categorize</b> &rarr; <b>All Categories</b> on any event.</p>
+        <p><b>Colour the labels listed above</b> &mdash; the ones this run created. If you chose one label for everything that's a single <code class="stamp-name">MyRJ Import</code>; if you chose a label per class it's one per course plus <code class="stamp-name">Red Day</code>, <code class="stamp-name">White Day</code> and <code class="stamp-name">School Calendar</code>. Leave the dated label alone: it exists for finding and deleting this batch later, not for colour.</p>
+        <p>These names don't change from semester to semester, so this is genuinely one-time. Next year's import lands already coloured.</p>
+      </div>
+    </div>
+
+    <figure class="dialog-mock wide">
+      <svg class="dialog-svg" viewBox="0 0 864 372" role="img" aria-labelledby="catTitle catDesc" xmlns="http://www.w3.org/2000/svg">
+      <title id="catTitle">Outlook's Categories settings with a colour being chosen</title>
+      <desc id="catDesc">The Categories settings pane listing MyRJ Import, MyRJ Import 2026-08, Podium and Events. The MyRJ Import row is outlined in red with its edit pencil highlighted, and a colour swatch grid is open beside it.</desc>
+      <g font-family="Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif">
+      <rect x="0" y="0" width="864" height="372" class="ol-main"/>
+      <rect x="0" y="0" width="216" height="372" class="ol-side"/>
+      <path d="M216.5 0v372" class="ol-line"/>
+      <text x="20" y="37" font-size="19" font-weight="600" class="ol-text">Settings</text>
+      <text x="24" y="84" font-size="14.5" class="ol-mute">General</text>
+      <text x="24" y="118" font-size="14.5" class="ol-mute">Mail</text>
+      <text x="24" y="152" font-size="14.5" class="ol-mute">Calendar</text>
+      <rect x="0" y="170" width="216" height="34" fill="var(--ol-btn)"/>
+      <rect x="0" y="170" width="3" height="34" class="ol-sel"/>
+      <text x="24" y="192" font-size="14.5" class="ol-sel" font-weight="600">Accounts</text>
+      <text x="40" y="226" font-size="14" class="ol-sel" font-weight="600">Categories</text>
+      <text x="24" y="260" font-size="14.5" class="ol-mute">People</text>
+
+      <text x="236" y="37" font-size="19" font-weight="600" class="ol-text">Categories</text>
+      <path d="M216 62.5h648" class="ol-line"/>
+      <text x="236" y="92" font-size="14" class="ol-mute">Give a category a colour once and every event carrying it changes at the same time.</text>
+
+      <rect x="236.5" y="116.5" width="380" height="40" rx="2" class="ol-field" stroke-width="1"/>
+      <circle cx="258" cy="136" r="7" fill="none" stroke="var(--ol-border)" stroke-width="1.5"/>
+      <text x="278" y="141" font-size="14" font-weight="600" class="ol-text">MyRJ Import</text>
+      <text x="470" y="141" font-size="12.5" class="ol-mute">no colour</text>
+      <g transform="translate(578 126) scale(0.72)" fill="none" stroke="var(--raider)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10a2.1 2.1 0 0 0-3-3L5 17v3z"/></g>
+      <rect x="234" y="114" width="385" height="45" rx="3" fill="none" class="ol-ring" stroke-width="2"/>
+
+      <rect x="236.5" y="170.5" width="380" height="36" rx="2" class="ol-field" stroke-width="1"/>
+      <circle cx="258" cy="188" r="7" fill="none" stroke="var(--ol-border)" stroke-width="1.5"/>
+      <text x="278" y="193" font-size="14" class="ol-mute">MyRJ Import 2026-08</text>
+      <text x="470" y="193" font-size="12.5" class="ol-mute">leave this one alone</text>
+
+      <rect x="236.5" y="216.5" width="380" height="36" rx="2" class="ol-field" stroke-width="1"/>
+      <circle cx="258" cy="234" r="7" fill="none" stroke="var(--ol-border)" stroke-width="1.5"/>
+      <text x="278" y="239" font-size="14" class="ol-mute">Podium</text>
+
+      <rect x="236.5" y="262.5" width="380" height="36" rx="2" class="ol-field" stroke-width="1"/>
+      <circle cx="258" cy="280" r="7" fill="none" stroke="var(--ol-border)" stroke-width="1.5"/>
+      <text x="278" y="285" font-size="14" class="ol-mute">Events</text>
+
+      <rect x="648.5" y="116.5" width="190" height="150" rx="3" class="ol-field" stroke-width="1"/>
+      <text x="664" y="140" font-size="12.5" font-weight="600" class="ol-text">Pick a colour</text>
+      <g>
+        <circle cx="678" cy="168" r="11" fill="var(--raider)"/>
+        <circle cx="678" cy="168" r="15" fill="none" class="ol-ring" stroke-width="2"/>
+        <circle cx="716" cy="168" r="11" fill="#8a8a8a"/>
+        <circle cx="754" cy="168" r="11" fill="#5f5f5f"/>
+        <circle cx="792" cy="168" r="11" fill="#3a3a3a"/>
+        <circle cx="678" cy="206" r="11" fill="#c9c9c9"/>
+        <circle cx="716" cy="206" r="11" fill="#a3a3a3"/>
+        <circle cx="754" cy="206" r="11" fill="#767676"/>
+        <circle cx="792" cy="206" r="11" fill="#4a4a4a"/>
+      </g>
+      <rect x="664" y="230" width="80" height="28" rx="2" class="ol-pri"/>
+      <text x="704" y="249" font-size="13" font-weight="600" class="ol-pri-t" text-anchor="middle">Save</text>
+      </g>
+    </svg>
+      <figcaption class="tb-caption">
+        <span class="tb-arrow">&uarr;</span>
+        <span>Where you choose the colours yourself &mdash; needed in new Outlook, harmless in classic. Colour <code>MyRJ Import</code> and leave the dated one blank. The real grid is a full spread of colours, not greys; it's drawn plain here because your Outlook's palette and theme won't match anyone else's.</span>
+      </figcaption>
+    </figure>
+
+    <div class="validation warning">
+      <div class="v-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+        Things that look wrong but aren't
+      </div>
+      <div class="v-summary">
+        <p><b>A day with no Red or White marker.</b> MyRJ only publishes the day-type marker on days you have something scheduled. If you have a free Tuesday, that Tuesday arrives bare. Nothing was lost in the cleaning &mdash; it was never in the file.</p>
+        <p><b>Only about a year of schedule.</b> The feed carries roughly the last two months and the next twelve. Next year's classes aren't missing; they aren't published yet.</p>
+        <p><b>Colours you didn't pick, or grey.</b> That's new Outlook colouring by label, explained just above. In classic Outlook you'll see none of this &mdash; everything arrives in the calendar's own colour.</p>
+        <p><b>The same import looking different on two machines.</b> Expected, for the same reason. It's the same events either way.</p>
       </div>
     </div>
 
     <div class="validation warning">
       <div class="v-header">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
         Run this again each semester &mdash; and delete the old set first
       </div>
       <div class="v-summary">
@@ -1106,12 +1377,44 @@
     </div>
   </section>
 
+  <!-- ===== 5. Subscribe as well ===== -->
+  <section class="section is-hidden" id="sec5">
+    <div class="section-h"><div class="step-num" id="num5">5</div><h2>Subscribe to the same feed &mdash; don't skip this one</h2></div>
+
+    <p><b>What you just imported is a photograph, not a live feed.</b> Those events are yours now: they block your time for colleagues and they reach your phone. But they are frozen as of today, and nothing will ever update them.</p>
+
+    <p>When the Academic Office changes something in MyRJ &mdash; a special schedule, or a one-hour late start called at 5:30am for weather &mdash; that change will <b>never</b> reach the copy you imported. On a delay morning it won't merely be out of date; it will be showing block times that are no longer real. That's why this step isn't optional.</p>
+
+    <div class="validation success">
+      <div class="v-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17M12 3c2.5 2.4 3.8 5.5 3.8 9S14.5 18.6 12 21c-2.5-2.4-3.8-5.5-3.8-9S9.5 5.4 12 3z"/></svg>
+        Add the live version &mdash; about ten seconds
+      </div>
+      <div class="v-summary">
+        <ol>
+          <li><b>Add calendar</b> &rarr; <b>Subscribe from web</b></li>
+          <li>Paste the same <code>https://</code> link from <a href="#sec2">Step 2</a> &mdash; it's still up there if you need to copy it again</li>
+          <li>Give it a name you'll recognise, like <b>MyRJ (live)</b>, and <b>Import</b></li>
+        </ol>
+        <p>Leave it switched on and visible alongside your own calendar. <b>The import is what makes you look busy to colleagues. The subscription is what tells you the truth.</b> When the two disagree, believe the subscription.</p>
+      </div>
+    </div>
+
+    <div class="validation warning">
+      <div class="v-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        The subscription is right, but it can be slow
+      </div>
+      <div class="v-summary">A change takes up to an hour to reach the feed, and Outlook only refreshes a subscribed calendar every three or four hours. So on the morning of a weather delay the subscription may still be catching up when you're getting in the car. <b>On a day when the schedule has actually changed, check MyRJ itself</b> &mdash; that's the only copy that's live. The subscription is for the ordinary changes you'd otherwise never hear about.</div>
+    </div>
+  </section>
+
 
   <!-- ===== Removing a past import (always visible reference) ===== -->
   <section class="section" id="remove">
     <div class="section-h">
       <div class="h-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/><path d="M10 11v5M14 11v5"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/><path d="M10 11v5M14 11v5"/></svg>
       </div>
       <h2>Removing a past import</h2>
       <span class="h-tag">Reference &mdash; always here</span>
@@ -1121,14 +1424,14 @@
 
     <div class="validation success">
       <div class="v-header">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
         First: did you import into a calendar of its own?
       </div>
-      <div class="v-summary">If you created a separate calendar for this (something like &ldquo;MyRJ Schedule&rdquo;), you're done in two clicks: <b>right-click that calendar</b> in the left-hand list &rarr; <b>Delete Calendar</b>. Everything in it goes at once and nothing of yours is touched. If you imported into your main calendar instead, use the steps below &mdash; and consider a separate calendar next time.</div>
+      <div class="v-summary">If you created a separate calendar for this (something like &ldquo;MyRJ Schedule&rdquo;), you're done in two clicks: <b>right-click that calendar</b> in the left-hand list &rarr; <b>Delete Calendar</b>. Everything in it goes at once and nothing of yours is touched.<br><br>If you followed <a href="#sec4">Step 4</a> and imported into your <b>main calendar</b>, that was the right call &mdash; it's what makes you look busy to colleagues &mdash; and the steps below are how you undo it. They're longer, but the labels this tool adds make it a single selection rather than hundreds of clicks.</div>
     </div>
 
-    <div class="subhead">Deleting from your main calendar</div>
-    <p>Outlook's calendar can be turned into a sortable table, which makes this one selection instead of hundreds of clicks.</p>
+    <div class="subhead">Deleting from your main calendar <span class="h-tag">Classic Outlook</span></div>
+    <p>Outlook's calendar can be turned into a sortable table, which makes this one selection instead of hundreds of clicks. This needs <b>classic Outlook</b> &mdash; new Outlook and the web version have no List view. If you're in new Outlook, switch the <b>New Outlook</b> toggle off (top right) before you start; there's more on that at the bottom of this section.</p>
     <ol>
       <li>Open <b>Calendar</b> in Outlook</li>
       <li><b>View</b> tab &rarr; <b>Change View</b> &rarr; <b>List</b><span class="tip">The step most people have never used. It turns the calendar into a flat, sortable list of every appointment you have.</span></li>
@@ -1148,7 +1451,7 @@
 
     <div class="validation warning">
       <div class="v-header">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg>
         Imported before August 2026? The label may be missing
       </div>
       <div class="v-summary">Earlier versions of this tool could lose the <code class="stamp-name">MyRJ Import</code> label on the way into Outlook, on events whose category list was already long. If you don't see it, that's why &mdash; use the <b>Created</b> column instead, which works regardless. Files cleaned here now keep the label reliably.</div>
@@ -1156,14 +1459,15 @@
 
     <div class="validation warning">
       <div class="v-header">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
         Check the selection before you press Delete
       </div>
       <div class="v-summary">If a real appointment of yours has crept into the selection, <b>Ctrl+click</b> it to deselect. Deleted calendar items go to <b>Deleted Items</b> and can be dragged back, and <b>Ctrl+Z</b> undoes the delete if you catch it immediately &mdash; but it's easier to catch here than to fish items out afterwards.</div>
     </div>
 
     <div class="subhead">If you don't see &ldquo;Change View&rdquo;</div>
-    <p>You're in <b>new Outlook</b> or Outlook on the web, which has no List view. Switch the <b>New Outlook</b> toggle off (top right) to get the classic version, where all of the above works. Without List view there's no reliable way to bulk-select an import &mdash; which is the strongest argument for putting the next one in its own calendar.</p>
+    <p>You're in <b>new Outlook</b> or Outlook on the web, which has no List view. Switch the <b>New Outlook</b> toggle off (top right) to get the classic version, where all of the above works &mdash; it's the same mailbox and the same events, just a different window onto them. Switch it back afterwards if you prefer the new one.</p>
+    <p>If classic Outlook isn't available to you at all, deleting an import from a main calendar by hand isn't realistic, and the honest advice changes: put your next import in a <b>calendar of its own</b> so removing it is two clicks. You'll give up the busy-blocking that makes colleagues stop booking over your classes &mdash; that's the trade &mdash; but you'll still have your schedule on your phone and on screen, and the live subscription from <a href="#sec5">Step 5</a> keeps it accurate.</p>
 
     <div class="subhead">Then re-import</div>
     <p>Once the old set is gone, <a href="#sec1">start again at Step 1</a>: download a fresh copy of the feed, clean it here, and import. The new batch gets its own dated label, so next time this takes about a minute.</p>
@@ -1194,7 +1498,8 @@
 
 <footer class="site-footer">
   Regis Jesuit &middot; Educational Technology &mdash; runs entirely in your browser, with no uploads, no storage and no external requests &middot;
-  <a href="mailto:jbeyer@regisjesuit.com?subject=MyRJ%20Schedule%20Cleaner%20feedback">Report a problem</a>
+  <a href="#" id="btnPrint">Print these steps</a> &middot;
+  <a href="mailto:jbeyer@regisjesuit.com?subject=MyRJ%20Schedule%20Cleaner%20feedback">Email Jason Beyer &mdash; stuck, or something here is wrong</a>
 </footer>
 
 <script>
@@ -1597,10 +1902,10 @@ function tally(list){
 function init(){
 
   var ICONS = {
-    success:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
-    warning:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
-    error:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
-    pending:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
+    success:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
+    warning:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+    error:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+    pending:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
   };
 
   var parsed = null, cleanedText = null, outName = "MyRJ-Schedule-clean.ics";
@@ -1872,6 +2177,11 @@ function init(){
           '<div class="download-desc">'+desc+'</div>'+
         '</div>'+
         '<button class="btn" id="btnDl" type="button">Download .ics</button>'+
+      '</div>'+
+      '<div class="name-row">'+
+        '<label for="outNameInput">Save it as</label>'+
+        '<input type="text" id="outNameInput" value="'+esc(outName)+'" spellcheck="false" autocomplete="off">'+
+        '<span class="r-foot" style="margin:0">rename it here if the download picked an unhelpful name</span>'+
       '</div>'+ labelHtml;
     $("btnDl").addEventListener("click", downloadFile);
 
@@ -1881,20 +2191,33 @@ function init(){
 
     markDone("sec3","num3");
     show($("sec4"));
+    show($("sec5"));
     $("sec4").scrollIntoView({behavior:"smooth", block:"start"});
   });
 
   /* --- 4: download --- */
   function downloadFile(){
     if(cleanedText === null) return;
+    /* The teacher can rename the output; the browser may have named the source
+       file for her without asking, so the name it suggests means nothing. */
+    var field = $("outNameInput");
+    var chosen = field && field.value ? field.value.replace(/[\\/:*?"<>|]/g,"").replace(/^\s+|\s+$/g,"") : "";
+    if(chosen && !/\.ics$/i.test(chosen)) chosen += ".ics";
     var blob = new Blob([cleanedText], {type:"text/calendar;charset=utf-8"});
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
-    a.href = url; a.download = outName;
+    a.href = url; a.download = chosen || outName;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
     markDone("sec4","num4");
   }
+
+  /* Printed steps: every collapsed explainer opens, the interactive parts drop
+     out. See the @media print block. */
+  $("btnPrint").addEventListener("click", function(e){
+    e.preventDefault();
+    window.print();
+  });
 
   $("url").addEventListener("keydown", function(e){
     if(e.key === "Enter"){ e.preventDefault(); $("btnFetch").click(); }
