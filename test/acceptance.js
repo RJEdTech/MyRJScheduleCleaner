@@ -23,7 +23,13 @@ const app = sandbox.module.exports;
 if (!app.parseIcs) throw new Error('index.html did not export its logic');
 
 const STAMP   = 'MyRJ Import 2026-08';
-const destamp = t => t.replace(/,MyRJ Import \d{4}-\d{2}/g, '');
+/* The tool now PREPENDS its labels to CATEGORIES — the first category is what
+   Outlook colours the event from — so stripping them means removing a leading
+   run, not a trailing one. Covers the stable label, the dated label, and any
+   per-class label sitting in front of both. */
+const destamp = t => t.replace(
+  /^CATEGORIES:(?:(?!MyRJ Import)[^,\r\n]+,)*?(?:MyRJ Import,)?(?:MyRJ Import \d{4}-\d{2},)?/gm,
+  'CATEGORIES:');
 const srcBuf  = fs.readFileSync(ICS);
 const srcText = srcBuf.toString('utf8');
 
@@ -184,12 +190,16 @@ check('Edge: truncated file — nothing inserted before BEGIN:VEVENT', 0,
         /^BEGIN:VEVENT/.test(a[i + 1] || '')).length);
 check('Edge: truncated file — incomplete block skipped, not mangled', 1, cutRes.skipped);
 /* Order preservation: a stray comment line between two VEVENTs stays put */
-const injected = srcText.replace('BEGIN:VEVENT\r\nUID:b8bb89f4',
-                                 'X-STRAY-LINE:keepme\r\nBEGIN:VEVENT\r\nUID:b8bb89f4');
+/* Anchor on a UID that actually exists in THIS export. Blackbaud mints fresh
+   UIDs on every download, so a hard-coded one silently turns this into a
+   no-op that passes by accident on the file it was written against. */
+const anchorUid = (srcText.match(/^UID:.*$/m) || ['UID:'])[0].replace(/\s+$/, '');
+const injected = srcText.replace('BEGIN:VEVENT\r\n' + anchorUid,
+                                 'X-STRAY-LINE:keepme\r\nBEGIN:VEVENT\r\n' + anchorUid);
 const inj = app.buildCleaned(app.parseIcs(injected), 'free', STAMP);
 const injLines = inj.text.split('\r\n');
 check('Edge: interstitial line kept in place, not moved to the tail', true,
-      /^UID:b8bb89f4/.test(injLines[injLines.indexOf('X-STRAY-LINE:keepme') + 2] || ''));
+      (injLines[injLines.indexOf('X-STRAY-LINE:keepme') + 2] || '') === anchorUid);
 /* File with no all-day events at all */
 const nz = app.buildCleaned(app.parseIcs(B.text), 'free', STAMP);
 check('Edge: file with no all-day events is passed through unchanged', true, nz.text === B.text);
@@ -318,22 +328,142 @@ if (fs.existsSync(ALT)) {
 
 /* ==================================================================== */
 /* ---- import stamp (makes an old import deletable in Outlook) ---- */
-check('Stamp: applied to every event exactly once', 288,
-      count(A.text, new RegExp(',' + STAMP + '$', 'gm')));
+check('Stamp: dated label on every event exactly once', 288,
+      count(A.text, new RegExp('^CATEGORIES:MyRJ Import,' + STAMP + ',', 'gm')));
+check('Stamp: stable label is FIRST on every event', 288,
+      count(A.text, /^CATEGORIES:MyRJ Import,/gm));
+check('Stamp: exactly one CATEGORIES property per event', 288,
+      vevents(A.text).filter(b => b.filter(l => /^CATEGORIES[;:]/i.test(l)).length === 1).length);
 check('Stamp: event titles untouched', true,
       (srcText.match(/^SUMMARY:.*$/gm) || []).join('|') === (A.text.match(/^SUMMARY:.*$/gm) || []).join('|'));
-check('Stamp: original podium,events category kept', 288,
-      count(A.text, /^CATEGORIES:podium,events,/gm));
+check("Stamp: MyRJ's own podium,events categories kept", 288,
+      count(A.text, /^CATEGORIES:.*,podium,events$/gm));
 check('Stamp: never duplicated within an event', 0,
       vevents(A.text).filter(b => b.filter(l => l.indexOf(STAMP) !== -1).length > 1).length);
-check('Stamp: a later run replaces rather than appends', 288,
-      count(app.buildCleaned(app.parseIcs(A.text), 'free', 'MyRJ Import 2027-01').text,
-            /^CATEGORIES:podium,events,MyRJ Import 2027-01$/gm));
+const NEXT = app.buildCleaned(app.parseIcs(A.text), 'free', 'MyRJ Import 2027-01').text;
+check('Stamp: a later run replaces the dated label rather than appending', 288,
+      count(NEXT, /^CATEGORIES:MyRJ Import,MyRJ Import 2027-01,podium,events$/gm));
+check('Stamp: the stable label is never duplicated by a re-run', 0,
+      count(NEXT, /MyRJ Import,MyRJ Import,/gm));
 check('Stamp: stamped lines stay within 75 octets', true, longest(A.text) <= 75);
 check('Stamp: page explains the label and how to delete by it', true,
       /Change View/.test(html) && /stamp-name/.test(html) && /List/.test(html));
 check('Stamp: page states titles are unaffected', true, /CATEGORIES/.test(html) || true);
 
+
+/* ==================================================================== */
+/* ---- category hygiene (the v1.2 bug: a second CATEGORIES property) ----
+   RFC 5545 permits more than one CATEGORIES per event, but Outlook reads
+   the first and silently drops the rest — so a label written as a second
+   property never reaches the calendar. These are the regressions.       */
+const oneCat = t => vevents(t).filter(b => b.filter(l => /^CATEGORIES[;:]/i.test(l)).length !== 1).length;
+check('Hygiene: never a second CATEGORIES property (mode A)', 0, oneCat(A.text));
+check('Hygiene: never a second CATEGORIES property (mode B)', 0, oneCat(B.text));
+
+/* An over-length category list must be re-folded, not escaped into a
+   second property. 75 octets is the RFC limit including the leading space
+   on continuation lines. */
+const LONGCATS = ['BEGIN:VEVENT', 'UID:x', 'DTSTART:20260817T150000Z', 'DTEND:20260817T160000Z',
+  'SUMMARY:AP Lang - 3 (4W)',
+  'CATEGORIES:podium,events,Upper Division Boys,Faculty Meetings,Advisory Group',
+  'END:VEVENT'];
+const longOut = app.applyStamp(LONGCATS, STAMP, []);
+check('Hygiene: over-length list re-folded, not split into a 2nd property', 1,
+      longOut.filter(l => /^CATEGORIES[;:]/i.test(l)).length);
+check('Hygiene: re-folded lines stay within 75 octets', true,
+      Math.max(...longOut.map(l => Buffer.byteLength(l, 'utf8'))) <= 75);
+const preFolded = ['BEGIN:VEVENT', 'CATEGORIES:podium,even', ' ts,Games/Practices', 'END:VEVENT'];
+check('Hygiene: an ALREADY-folded list is unfolded and rewritten in place', 1,
+      app.applyStamp(preFolded, STAMP, []).filter(l => /^CATEGORIES[;:]/i.test(l)).length);
+check('Hygiene: CATEGORIES with parameters keeps them', true,
+      app.applyStamp(['BEGIN:VEVENT', 'CATEGORIES;LANGUAGE=en-US:podium', 'END:VEVENT'], STAMP, [])
+         .some(l => /^CATEGORIES;LANGUAGE=en-US:MyRJ Import,/.test(l)));
+
+/* ---- foldLine / dedupe ---- */
+check('Fold: a short line is returned as one line', 1, app.foldLine('CATEGORIES:a,b').length);
+check('Fold: every produced line is within 75 octets', true,
+      app.foldLine('CATEGORIES:' + 'x'.repeat(400))
+         .every(l => Buffer.byteLength(l, 'utf8') <= 75));
+check('Fold: continuations start with a single space', true,
+      app.foldLine('CATEGORIES:' + 'x'.repeat(400)).slice(1).every(l => /^ [^ ]/.test(l)));
+check('Fold: unfolding a folded line restores the original', 'CATEGORIES:' + 'x'.repeat(400),
+      app.foldLine('CATEGORIES:' + 'x'.repeat(400)).map((l, i) => i ? l.slice(1) : l).join(''));
+check('Dedupe: case-insensitive, first occurrence wins', 'A,b',
+      app.dedupe(['A', 'b', 'a', 'B', '']).join(','));
+
+/* ==================================================================== */
+/* ---- per-class labels (mode "class") ----
+   Derived from the real title grammar: "<course>-<division> - <n> (<blocks>)" */
+check('Course: division and section index stripped', 'Theology 3',
+      app.parseCourse('Theology 3-BD - 5 (4W-1W-3W)').course);
+check('Course: division captured', 'BD', app.parseCourse('Theology 3-BD - 5 (4W-1W-3W)').div);
+check('Course: multiple trailing parentheticals stripped', 'A Theology of Encounter',
+      app.parseCourse('A Theology of Encounter - 1 (MAX 25) (3W-4W-1W)').course);
+check('Course: no division suffix means no division', '',
+      app.parseCourse('A Theology of Encounter - 1 (MAX 25) (3W-4W-1W)').div);
+check('Course: girls division recognised', 'GD', app.parseCourse('Theology 3-GD - 2 (1R-2R)').div);
+check('Course: a title with none of the furniture survives intact', 'Study Hall',
+      app.parseCourse('Study Hall').course);
+check('Course: commas cannot break the CATEGORIES separator', -1,
+      app.parseCourse('Rhetoric, Advanced - 4 (2W)').course.indexOf(','));
+check('Day: white day variants collapse', 'White Day', app.dayLabel('White Day - IMPACT Day (RJHS)'));
+check('Day: red day variants collapse', 'Red Day', app.dayLabel('Red Day - One-Hour Late Start (RJHS)'));
+check('Day: everything else is one bucket', 'School Calendar',
+      app.dayLabel('Thanksgiving Holiday - SCHOOL CLOSED (RJHS)'));
+
+const C = app.buildCleaned(doc, 'free', STAMP, 'class');
+const cNames = (C.labels || []).map(l => l.name);
+check('Class mode: label count on the real export', 6, cNames.length);
+check('Class mode: counts sum to the event total', 288,
+      (C.labels || []).reduce((n, l) => n + l.count, 0));
+check('Class mode: division NOT appended when it separates nothing', 0,
+      cNames.filter(n => /\((BD|GD)\)$/.test(n)).length);
+check('Class mode: the class label comes FIRST (it drives the colour)', 288,
+      count(C.text, /^CATEGORIES:(?!MyRJ Import)[^,\r\n]+,MyRJ Import,MyRJ Import \d{4}-\d{2},/gm));
+check('Class mode: import labels still present for deletion', 288,
+      count(C.text, /,MyRJ Import,MyRJ Import \d{4}-\d{2},/gm));
+check('Class mode: still exactly one CATEGORIES per event', 0, oneCat(C.text));
+check('Class mode: still within 75 octets', true, longest(C.text) <= 75);
+check('Class mode: idempotent', true,
+      app.buildCleaned(app.parseIcs(C.text), 'free', STAMP, 'class').text === C.text);
+check('Class mode: re-running does not stack the class label', 0,
+      vevents(app.buildCleaned(app.parseIcs(C.text), 'free', STAMP, 'class').text)
+        .filter(b => /^CATEGORIES:([^,\r\n]+),\1,/.test(b.find(l => /^CATEGORIES:/.test(l)) || '')).length);
+check('Class mode: event titles still untouched', true,
+      (srcText.match(/^SUMMARY:.*$/gm) || []).join('|') === (C.text.match(/^SUMMARY:.*$/gm) || []).join('|'));
+check('One-label mode reports no per-class labels', 0, (A.labels || []).length);
+
+/* Same course in both divisions — the only case where the suffix earns its keep. */
+const ev = (uid, sum) => ['BEGIN:VEVENT', 'UID:' + uid, 'DTSTART:20260817T150000Z',
+  'DTEND:20260817T160000Z', 'SUMMARY:' + sum, 'CATEGORIES:podium,events', 'END:VEVENT'].join('\r\n');
+const bothDiv = app.buildCleaned(app.parseIcs(['BEGIN:VCALENDAR', 'VERSION:2.0',
+  ev(1, 'Theology 3-BD - 5 (4W-1W-3W)'), ev(2, 'Theology 3-GD - 2 (1R-2R)'),
+  ev(3, 'A Theology of Encounter - 1 (MAX 25) (3W)'), 'END:VCALENDAR'].join('\r\n')),
+  'free', STAMP, 'class');
+const bdNames = bothDiv.labels.map(l => l.name).sort().join('|');
+check('Divisions: same course in both divisions splits', 
+      'A Theology of Encounter|Theology 3 (BD)|Theology 3 (GD)', bdNames);
+check('Divisions: a division category is added when the file spans both', 1,
+      count(bothDiv.text, /,Boys Division,/gm));
+check('Divisions: single-division courses gain no division suffix', true,
+      bdNames.indexOf('A Theology of Encounter|') === 0);
+
+/* ---- the page teaches all of this ---- */
+check('Page: offers the labelling choice', true,
+      /name="labelMode"/.test(html) && /id="labelOne"/.test(html) && /id="labelClass"/.test(html));
+check('Page: explains that Outlook colours by label', true,
+      /colours calendar events by label/i.test(html));
+check('Page: lists the labels it created after cleaning', true, /label-list/.test(html));
+check('Page: removal section is always visible, not inside a step', true,
+      /<section class="section" id="remove">/.test(html));
+check('Page: removal section is linked from the top of the page', true,
+      /href="#remove"/.test(html));
+check('Page: teaches the Created-column fallback', true,
+      /Field Chooser/.test(html) && /Created/.test(html));
+check('Page: teaches assigning a category colour', true,
+      /Categories<\/b>, find the label/.test(html) || /pick a colour/i.test(html));
+check('Page: only the dated label is rewritten at runtime', 1,
+      count(html, /class="stamp-name stamp-dyn"/g));
 
 const w = Math.max(...rows.map(r => r[1].length));
 for (const [s, n, e, a] of rows) {

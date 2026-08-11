@@ -22,7 +22,11 @@ const app = sandbox.module.exports;
 
 /* Fixed stamp so runs are reproducible (the page uses the current month). */
 const STAMP = 'MyRJ Import 2026-08';
-const destamp = t => t.replace(/,MyRJ Import \d{4}-\d{2}/g, '');
+/* Labels are PREPENDED to CATEGORIES (the first one drives the colour in
+   Outlook), so stripping them removes a leading run, not a trailing one. */
+const destamp = t => t.replace(
+  /^CATEGORIES:(?:(?!MyRJ Import)[^,\r\n]+,)*?(?:MyRJ Import,)?(?:MyRJ Import \d{4}-\d{2},)?/gm,
+  'CATEGORIES:');
 
 /* ---- independent scan (does not use the tool's own parser) ---- */
 function scan(text) {
@@ -41,6 +45,10 @@ const octets = t => Math.max(...t.split('\r\n').map(l => Buffer.byteLength(l, 'u
 const crlfOnly = t => { const s = t.split('\r\n').join(''); return !s.includes('\n') && !s.includes('\r'); };
 const foldedCount = t => t.split('\r\n').filter(l => /^[ \t]/.test(l)).length;
 const propCount = (t, p) => (t.match(new RegExp('^' + p + '[;:]', 'gmi')) || []).length;
+/* Re-folding a long CATEGORIES line legitimately adds continuation lines, so
+   the "folding preserved" check has to discount the ones the tool wrote. */
+const extraFolds = t => t.split('\r\n').filter((l, i, a) =>
+  /^[ \t]/.test(l) && /^CATEGORIES[;:]/i.test((a.slice(0, i).reverse().find(x => !/^[ \t]/.test(x)) || ''))).length;
 
 let totalPass = 0, totalFail = 0;
 
@@ -122,18 +130,43 @@ for (const file of files) {
   t('B: idempotent', true, app.buildCleaned(app.parseIcs(B.text), 'strip', STAMP).text === B.text);
 
   /* ---- import stamp ---- */
-  const stamped = (A.text.match(new RegExp(',' + STAMP + '$', 'gm')) || []).length;
-  t('stamp: applied to every event exactly once', srcBlocks.length, stamped);
+  const stamped = (A.text.match(new RegExp('^CATEGORIES:MyRJ Import,' + STAMP + '(,|$)', 'gm')) || []).length;
+  t('stamp: dated label on every event exactly once', srcBlocks.length, stamped);
+  t('stamp: stable label first on every event', srcBlocks.length,
+    (A.text.match(/^CATEGORIES:MyRJ Import,/gm) || []).length);
+  t('stamp: exactly one CATEGORIES property per event', 0,
+    scan(A.text).filter(b => b.filter(l => /^CATEGORIES[;:]/i.test(l)).length !== 1).length);
   t('stamp: no event carries it twice', 0,
     scan(A.text).filter(b => b.filter(l => l.indexOf(STAMP) !== -1).length > 1).length);
   t('stamp: SUMMARY (event title) untouched', true,
     (src.match(/^SUMMARY:.*$/gm) || []).join('|') === (A.text.match(/^SUMMARY:.*$/gm) || []).join('|'));
   t('stamp: original categories preserved alongside', srcBlocks.length,
-    (A.text.match(/^CATEGORIES:podium,events,/gm) || []).length);
+    (A.text.match(/,podium,events$/gm) || []).length);
   t('stamp: stamped lines still <= 75 octets', true, octets(A.text) <= 75);
+  const NEXT = app.buildCleaned(app.parseIcs(A.text), 'free', 'MyRJ Import 2027-01').text;
   t('stamp: re-running next semester replaces, never accumulates', srcBlocks.length,
-    (app.buildCleaned(app.parseIcs(A.text), 'free', 'MyRJ Import 2027-01').text
-      .match(/^CATEGORIES:podium,events,MyRJ Import 2027-01$/gm) || []).length);
+    (NEXT.match(/^CATEGORIES:MyRJ Import,MyRJ Import 2027-01,/gm) || []).length);
+  t('stamp: the stable label is never duplicated by a re-run', 0,
+    (NEXT.match(/MyRJ Import,MyRJ Import,/gm) || []).length);
+
+  /* ---- per-class labels ---- */
+  const C = app.buildCleaned(doc, 'free', STAMP, 'class');
+  t('class: every event carries a leading class/day label', srcBlocks.length,
+    (C.text.match(/^CATEGORIES:(?!MyRJ Import)[^,\r\n]+,MyRJ Import,MyRJ Import \d{4}-\d{2}/gm) || []).length);
+  t('class: import labels survive alongside the class label', srcBlocks.length,
+    (C.text.match(/,MyRJ Import,MyRJ Import \d{4}-\d{2}/gm) || []).length);
+  t('class: exactly one CATEGORIES property per event', 0,
+    scan(C.text).filter(b => b.filter(l => /^CATEGORIES[;:]/i.test(l)).length !== 1).length);
+  t('class: still within 75 octets', true, octets(C.text) <= 75);
+  t('class: label counts sum to the event total', srcBlocks.length,
+    (C.labels || []).reduce((n, l) => n + l.count, 0));
+  t('class: idempotent', true,
+    app.buildCleaned(app.parseIcs(C.text), 'free', STAMP, 'class').text === C.text);
+  t('class: SUMMARY untouched', true,
+    (src.match(/^SUMMARY:.*$/gm) || []).join('|') === (C.text.match(/^SUMMARY:.*$/gm) || []).join('|'));
+  t('class: UIDs preserved exactly', true, uids(src).join('|') === uids(C.text).join('|'));
+  t('class: folded continuation lines preserved',
+    foldedCount(src.replace(/\r\n|\n|\r/g, '\r\n')) , foldedCount(C.text) - extraFolds(C.text));
   t('stamp: opting out leaves categories exactly as found', 0,
     (app.buildCleaned(doc, 'free', null).text.match(/MyRJ Import/g) || []).length);
 

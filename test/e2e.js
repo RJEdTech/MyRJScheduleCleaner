@@ -84,13 +84,31 @@ const HTTPSU = WEBCAL.replace(/^webcal/, 'https');
   await page.waitForSelector('#sec4:not(.is-hidden)');
   await page.waitForTimeout(400);
   const resultText = (await page.textContent('#result')).replace(/\s+/g, ' ').trim();
-  const deleteHelp = (await page.textContent('#sec4')).replace(/\s+/g, ' ').trim();
+  const step4Help  = (await page.textContent('#sec4')).replace(/\s+/g, ' ').trim();
+  /* Removal moved out of step 4 into its own always-visible section, so a
+     teacher returning a semester later can find it without re-running. */
+  const deleteHelp = (await page.textContent('#remove')).replace(/\s+/g, ' ').trim();
+  const removeVisible = await page.$eval('#remove', e => !e.classList.contains('is-hidden') && e.offsetHeight > 0);
+  const removeLinked  = await page.$eval('main', e => !!e.querySelector('a[href="#remove"]'));
+  const oneLabels = await page.$$eval('.label-list li', els => els.map(e => e.textContent.trim()));
   await page.screenshot({ path: path.join(OUT, '05-light-result.png'), fullPage: true });
 
   const dl = await Promise.all([page.waitForEvent('download'), page.click('#btnDl')]);
   const saved = path.join(OUT, 'downloaded.ics');
   await dl[0].saveAs(saved);
   const got = fs.readFileSync(saved, 'utf8');
+
+  /* --- run again in per-class mode --- */
+  await page.click('#labelClass');
+  await page.click('#btnRun');
+  await page.waitForTimeout(400);
+  const classLabels = await page.$$eval('.label-list li', els => els.map(e => e.textContent.trim()));
+  const modeStillFree = await page.$eval('#modeFree', e => e.classList.contains('is-selected'));
+  await page.screenshot({ path: path.join(OUT, '07-light-per-class.png'), fullPage: true });
+  const dl2 = await Promise.all([page.waitForEvent('download'), page.click('#btnDl')]);
+  const savedClass = path.join(OUT, 'downloaded-per-class.ics');
+  await dl2[0].saveAs(savedClass);
+  const gotClass = fs.readFileSync(savedClass, 'utf8');
 
   await page.click('#theme-toggle');
   await page.waitForTimeout(400);
@@ -141,12 +159,35 @@ const HTTPSU = WEBCAL.replace(/^webcal/, 'https');
   t('downloaded: VTIMEZONE intact', expTz, (got.match(/^BEGIN:VTIMEZONE/gm) || []).length);
   t('downloaded: folded lines preserved', (src.match(/^[ \t]/gm) || []).length,
     (got.match(/^[ \t]/gm) || []).length);
-  const stampRe = /,MyRJ Import \d{4}-\d{2}$/gm;
-  t('downloaded: import stamp on every event', srcBlocks.length, (got.match(stampRe) || []).length);
+  const stampRe = /^CATEGORIES:MyRJ Import,MyRJ Import \d{4}-\d{2}(,|$)/gm;
+  t('downloaded: import labels on every event', srcBlocks.length, (got.match(stampRe) || []).length);
+  t('downloaded: exactly one CATEGORIES per event', srcBlocks.length,
+    (got.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g) || [])
+      .filter(b => (b.match(/^CATEGORIES[;:]/gm) || []).length === 1).length);
+  t('downloaded: no line over 75 octets', 0,
+    got.split('\r\n').filter(l => Buffer.byteLength(l, 'utf8') > 75).length);
   t('downloaded: event titles untouched', true,
     (src.match(/^SUMMARY:.*$/gm) || []).join('|') === (got.match(/^SUMMARY:.*$/gm) || []).join('|'));
-  t('page shows the stamp name after cleaning', true, /MyRJ Import \d{4}-\d{2}/.test(deleteHelp));
+  /* The dated label is written into step 4 at run time; the removal section
+     is static reference text and deliberately shows the YYYY-MM placeholder. */
+  t('step 4 shows the dated label after cleaning', true, /MyRJ Import \d{4}-\d{2}/.test(step4Help));
   t('page shows the List-view delete steps', true, /Change View/.test(deleteHelp) && /List/.test(deleteHelp));
+  t('removal section visible without running the tool', true, removeVisible);
+  t('choosing a label mode does not clear the all-day choice', true, modeStillFree);
+  t('removal section linked from the top of the page', true, removeLinked);
+  t('one-label mode lists the single label to colour', true,
+    oneLabels.length === 1 && /MyRJ Import/.test(oneLabels[0]));
+  t('step 4 explains the grey-events colour fix', true, /pick a colour/i.test(step4Help));
+  t('per-class run lists one label per course plus day labels', true,
+    classLabels.length === 6 && classLabels.some(x => /Theology 3/.test(x))
+                             && classLabels.some(x => /White Day/.test(x)));
+  t('per-class download puts the class label first', true,
+    /^CATEGORIES:(?!MyRJ Import)[^,\r\n]+,MyRJ Import,MyRJ Import \d{4}-\d{2}/m.test(gotClass));
+  t('per-class download keeps the deletion labels', srcBlocks.length,
+    (gotClass.match(/,MyRJ Import,MyRJ Import \d{4}-\d{2}/gm) || []).length);
+  t('per-class download: exactly one CATEGORIES per event', srcBlocks.length,
+    (gotClass.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g) || [])
+      .filter(b => (b.match(/^CATEGORIES[;:]/gm) || []).length === 1).length);
   t('downloaded: all UIDs preserved', true,
     (src.match(/^UID:.*$/gm) || []).join('|') === (got.match(/^UID:.*$/gm) || []).join('|'));
   t('downloaded: ends with END:VCALENDAR', true, /END:VCALENDAR\r\n$/.test(got));
