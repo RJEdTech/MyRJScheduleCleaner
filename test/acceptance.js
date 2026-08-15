@@ -286,12 +286,12 @@ check('Convert: percent-encoded token preserved byte-for-byte', true,
       app.normalizeUrl(WEBCAL).split('?z=')[1] === WEBCAL.split('?z=')[1]);
 check('Convert: only the scheme changes', true,
       app.normalizeUrl(WEBCAL).replace(/^https/, '') === WEBCAL.replace(/^webcal/, ''));
-check('Convert: copy + open-in-new-tab controls present', true,
-      /id="btnCopy"/.test(html) && /id="btnOpen"/.test(html) && /id="httpsUrl"/.test(html));
+check('Convert: single download button + manual copy fallback present', true,
+      /id="btnDownload"/.test(html) && /id="btnCopy"/.test(html) && /id="httpsUrl"/.test(html));
 check('Convert: clipboard has a non-secure-context fallback', true,
       /execCommand\("copy"\)/.test(html));
-check('Convert: teaches naming the download after the feed', true,
-      /name it after the feed you copied/i.test(html) && /MyCalendars/.test(html));
+check('Convert: the cleaned output can be renamed before download', true,
+      /id="outNameInput"/.test(html) && /rename/i.test(html));
 
 /* ---- second real export: same feed, downloaded again ---- */
 const ALT = path.join(__dirname, '..', 'MyCalendars.ics');
