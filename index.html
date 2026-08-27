@@ -1162,7 +1162,28 @@
       </label>
     </div>
 
-    
+    <div class="opt-label">Are you here every day, or only when you teach?</div>
+    <p class="opt-help">Most teachers are here every day &mdash; leave this on <b>Every school day</b>. If you're <b>part-time</b> and only come in on your teaching rotation, the tool marks the days you're <i>not</i> here as <b>Out of Office</b>, so no one books you then.</p>
+    <div class="path-grid" id="teachDays">
+      <label class="path-card is-selected" id="teachBoth">
+        <input type="radio" name="teachDays" value="both" checked>
+        <span class="path-badge">Most people</span>
+        <span class="path-title">I'm here every school day</span>
+        <span class="path-desc">Full-time. Red and White days both stay free &mdash; your class blocks are what show you busy.</span>
+      </label>
+      <label class="path-card" id="teachWhite">
+        <input type="radio" name="teachDays" value="white">
+        <span class="path-title">I only teach on White (W) days</span>
+        <span class="path-desc">Part-time. Every <b>Red day</b> is blocked as <b>Out of Office</b> &mdash; you're not here, so no one books you. White days stay free.</span>
+      </label>
+      <label class="path-card" id="teachRed">
+        <input type="radio" name="teachDays" value="red">
+        <span class="path-title">I only teach on Red (R) days</span>
+        <span class="path-desc">Part-time. Every <b>White day</b> is blocked as <b>Out of Office</b>. Red days stay free.</span>
+      </label>
+    </div>
+
+
         </div>
       </details>
       <details class="peek"><summary id="adSummary">See the all-day events</summary>
@@ -1826,10 +1847,11 @@ function isClosedDay(summary){
   if(/NO CLASSES/i.test(s) && /break/i.test(s)) return true;
   return false;
 }
-function buildCleaned(doc, mode, stamp, labelMode){
+function buildCleaned(doc, mode, stamp, labelMode, teachDays){
   var out = [];
-  var changed = 0, already = 0, removed = 0, timedKept = 0, allDayKept = 0, skipped = 0, closedBlocked = 0;
+  var changed = 0, already = 0, removed = 0, timedKept = 0, allDayKept = 0, skipped = 0, closedBlocked = 0, offBlocked = 0;
   if(stamp === undefined) stamp = makeStamp();
+  if(teachDays === undefined) teachDays = "both";
   var labels = {}, order = [];
   var plan = labelPlan(doc);
   function tally(name){
@@ -1844,9 +1866,16 @@ function buildCleaned(doc, mode, stamp, labelMode){
     var lead = leadLabels(it, labelMode, plan);
     if(!it.allDay){ timedKept++; tally(lead[0]); pushAll(out, applyStamp(it.lines, stamp, lead)); continue; }
     var closed = isClosedDay(it.summary);
-    /* Strip mode removes the ordinary day markers, but a School Closed / break
-       day is the one all-day event we always keep — its whole job is to block. */
-    if(!closed && mode === "strip"){ removed++; continue; }
+    /* Part-time: someone who only works at RJ on the days they teach wants the
+       OTHER rotation blocked. teachDays "white" => block Red days; "red" =>
+       block White days; "both" (default, full-time) => block neither. */
+    var offType = teachDays === "white" ? "Red Day" : (teachDays === "red" ? "White Day" : null);
+    var offDay = !closed && offType && dayLabel(it.summary) === offType;
+    var blockDay = closed || offDay;
+    /* Strip mode removes the ordinary day markers, but a day we deliberately
+       block (school closed, or a rotation day a part-timer is off) is kept —
+       blocking is its whole purpose. */
+    if(!blockDay && mode === "strip"){ removed++; continue; }
     allDayKept++;
     tally(lead[0]);
 
@@ -1859,11 +1888,11 @@ function buildCleaned(doc, mode, stamp, labelMode){
     }
     if(at < 1){ skipped++; pushAll(out, it.lines); continue; }
 
-    if(closed){
-      /* School closed / break you're off for: force Out of Office so the whole
-         day blocks and nobody books you. Strip any existing free/busy props
-         first — the feed leaves them off (defaulting to busy), and a prior run
-         of this tool may have wrongly marked the day free. */
+    if(blockDay){
+      /* A day off (school closed/break, or a rotation day a part-timer doesn't
+         teach): force Out of Office so the whole day blocks and nobody books
+         you. Strip any existing free/busy props first — the feed leaves them
+         off (defaulting to busy), and a prior run may have marked the day free. */
       var kept = [];
       for(var c=0;c<at;c++){
         if(/^TRANSP[;:]/i.test(lines[c])) continue;
@@ -1875,7 +1904,7 @@ function buildCleaned(doc, mode, stamp, labelMode){
       out.push("X-MICROSOFT-CDO-BUSYSTATUS:OOF");    // shows Out of Office in Outlook
       out.push("X-MICROSOFT-CDO-INTENDEDSTATUS:OOF");
       pushAll(out, lines.slice(at));
-      closedBlocked++;
+      if(closed) closedBlocked++; else offBlocked++;
       continue;
     }
 
@@ -1904,7 +1933,7 @@ function buildCleaned(doc, mode, stamp, labelMode){
   labelList.sort(function(a,b){ return b.count - a.count; });
 
   return { text:text, changed:changed, already:already, removed:removed,
-           timedKept:timedKept, allDayKept:allDayKept, skipped:skipped, closedBlocked:closedBlocked,
+           timedKept:timedKept, allDayKept:allDayKept, skipped:skipped, closedBlocked:closedBlocked, offBlocked:offBlocked,
            stamp:stamp, labels:labelList };
 }
 function pushAll(target, arr){ for(var i=0;i<arr.length;i++) target.push(arr[i]); }
@@ -2162,14 +2191,18 @@ function init(){
     var mode = checked ? checked.value : "free";
     var lchecked = document.querySelector('input[name="labelMode"]:checked');
     var labelMode = lchecked ? lchecked.value : "one";
-    var res = buildCleaned(parsed, mode, undefined, labelMode);
+    var tchecked = document.querySelector('input[name="teachDays"]:checked');
+    var teachDays = tchecked ? tchecked.value : "both";
+    var res = buildCleaned(parsed, mode, undefined, labelMode, teachDays);
     cleanedText = res.text;
 
+    var offName = teachDays === "white" ? "Red" : "White";
     var desc;
     if(mode === "free"){
       var parts = [];
       if(res.changed) parts.push("<b>"+res.changed+" all-day events</b> marked as free &mdash; they still show, but no longer block your time");
       if(res.closedBlocked) parts.push("<b>"+res.closedBlocked+" school-closed day"+(res.closedBlocked>1?"s":"")+"</b> set to <b>Out of Office</b>, so your whole day is blocked and no one books you when you're off");
+      if(res.offBlocked) parts.push("<b>"+res.offBlocked+" "+offName+" day"+(res.offBlocked>1?"s":"")+"</b> set to <b>Out of Office</b> &mdash; the days you don't teach, so no one books you then");
       if(!parts.length){
         desc = "Nothing needed changing. <b>"+res.timedKept+"</b> timed events passed through untouched.";
       }else{
@@ -2179,6 +2212,7 @@ function init(){
     }else{
       desc = "<b>"+res.removed+" all-day events removed.</b> <b>"+res.timedKept+" timed events</b> kept.";
       if(res.closedBlocked) desc += " <b>"+res.closedBlocked+" school-closed day"+(res.closedBlocked>1?"s":"")+"</b> kept and set to Out of Office so your day still blocks.";
+      if(res.offBlocked) desc += " <b>"+res.offBlocked+" "+offName+" day"+(res.offBlocked>1?"s":"")+"</b> kept and set to Out of Office (the days you don't teach).";
     }
     if(res.skipped) desc += " "+res.skipped+" incomplete event(s) were passed through untouched.";
 

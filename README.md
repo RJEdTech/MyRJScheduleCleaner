@@ -74,6 +74,16 @@ modes (they are the point). Idempotent: a re-run strips and rewrites the same th
 **B — Remove them entirely.** Drop all-day `VEVENT`s, for people who already subscribe
 to the Red Day / White Day calendars separately. (Closed days are still kept and blocked.)
 
+**Part-time option (`teachDays`).** A fifth argument to `buildCleaned` — `"both"`
+(default, full-time), `"white"`, or `"red"`. For a part-timer who is only at RJ on the
+days they teach, the *other* rotation's day markers block as Out of Office (same OOF
+props as a closed day). `"white"` blocks every `Red Day`; `"red"` blocks every
+`White Day`; detected via `dayLabel(summary)`. School-closed/break days block regardless,
+In-Service / retreat / testing / IMPACT days are unaffected (not a Red/White rotation
+day), and `"both"` changes nothing — so the default is a no-op for everyone full-time.
+`buildCleaned` returns `offBlocked` alongside `closedBlocked`. In the page it's the
+"Are you here every day, or only when you teach?" option.
+
 ## Implementation notes
 
 **Conservative surgery, never a rewrite.** The file is tokenised into an ordered list of
