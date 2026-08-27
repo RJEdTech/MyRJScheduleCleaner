@@ -150,6 +150,12 @@ const HTTPSU = WEBCAL.replace(/^webcal/, 'https');
   const nEv = (got.match(/^BEGIN:VEVENT/gm) || []).length;
   const nTr = (got.match(/^TRANSP:TRANSPARENT$/gm) || []).length;
   const nCd = (got.match(/^X-MICROSOFT-CDO-BUSYSTATUS:FREE$/gm) || []).length;
+  const nOpaque = (got.match(/^TRANSP:OPAQUE$/gm) || []).length;
+  const nOOF = (got.match(/^X-MICROSOFT-CDO-BUSYSTATUS:OOF$/gm) || []).length;
+  const summOf = b => { const l = b.find(x => /^SUMMARY[;:]/i.test(x)); return l ? l.slice(l.indexOf(':') + 1) : ''; };
+  const isClosedSum = s => /SCHOOL CLOSED/i.test(s) || (/NO CLASSES/i.test(s) && /break/i.test(s));
+  const closedAll = srcBlocks.filter(b => isAD(b) && isClosedSum(summOf(b))).length;
+  const openAll = expAll - closedAll;
   const base = path.basename(ICS).replace(/\.ics$/i, '');
 
   const R = [];
@@ -178,7 +184,8 @@ const HTTPSU = WEBCAL.replace(/^webcal/, 'https');
   t('stat: timed', String(expTim), stats[1][0]);
   t('stat: all-day', String(expAll), stats[2][0]);
   t('all-day table has rows', true, /\S/.test(firstRow));
-  t('result names the all-day count', true, resultText.includes(expAll + ' all-day events'));
+  t('result names the open all-day count', true, resultText.includes(openAll + ' all-day events'));
+  t('result mentions the school-closed days blocked', true, resultText.includes(closedAll + ' school-closed'));
   t('result names the timed count', true, resultText.includes(expTim + ' timed events'));
   t('step 4 shows the dated label after cleaning', true, /MyRJ Import \d{4}-\d{2}/.test(step4Help));
   t('step 5 explains the grey-events colour fix', true, /pick a colou?r/i.test(step5Help));
@@ -196,8 +203,10 @@ const HTTPSU = WEBCAL.replace(/^webcal/, 'https');
   // downloaded file correctness (engine)
   t('download named after the source file', base + '-clean.ics', dl[0].suggestedFilename());
   t('downloaded: VEVENT count', srcBlocks.length, nEv);
-  t('downloaded: TRANSP:TRANSPARENT', expAll, nTr);
-  t('downloaded: CDO BUSYSTATUS:FREE', expAll, nCd);
+  t('downloaded: TRANSP:TRANSPARENT on open all-day', openAll, nTr);
+  t('downloaded: CDO BUSYSTATUS:FREE on open all-day', openAll, nCd);
+  t('downloaded: TRANSP:OPAQUE on school-closed days', closedAll, nOpaque);
+  t('downloaded: CDO BUSYSTATUS:OOF on school-closed days', closedAll, nOOF);
   t('downloaded: CRLF throughout', true, got.split('\r\n').join('').indexOf('\n') === -1);
   t('downloaded: VTIMEZONE intact', expTz, (got.match(/^BEGIN:VTIMEZONE/gm) || []).length);
   t('downloaded: folded lines preserved', (src.match(/^[ \t]/gm) || []).length,

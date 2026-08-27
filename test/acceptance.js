@@ -56,7 +56,7 @@ const isAllDayBlock = b => b.some(l => /^DTSTART[^:]*VALUE=DATE(?!-TIME)/i.test(
 const uidsOf = t => vevents(t).map(b => (b.find(l => l.startsWith('UID:')) || '').slice(4));
 /* Everything in a VEVENT except the two properties we are allowed to add. */
 const fingerprint = b => destamp(b.filter(l =>
-  !/^TRANSP:/i.test(l) && !/^X-MICROSOFT-CDO-BUSYSTATUS:/i.test(l)).join('\n'));
+  !/^TRANSP:/i.test(l) && !/^X-MICROSOFT-CDO-BUSYSTATUS:/i.test(l) && !/^X-MICROSOFT-CDO-INTENDEDSTATUS:/i.test(l)).join('\n'));
 
 /* ==================================================================== */
 console.log('\n  Source: ' + path.basename(ICS) + '  (' + srcBuf.length + ' bytes)\n');
@@ -65,6 +65,10 @@ const doc     = app.parseIcs(srcText);
 const srcEv   = vevents(srcText);
 const srcAll  = srcEv.filter(isAllDayBlock);
 const srcTim  = srcEv.filter(b => !isAllDayBlock(b));
+/* School-closed / break days block (Out of Office) instead of going free. */
+const summOf   = b => { const l = b.find(x => /^SUMMARY[;:]/i.test(x)); return l ? l.slice(l.indexOf(':') + 1) : ''; };
+const isClosed = b => app.isClosedDay(summOf(b));
+const nClosed  = srcAll.filter(isClosed).length, nOpen = srcAll.length - nClosed;
 
 /* --- spec §7 row 1: events parsed matches grep -c BEGIN:VEVENT --- */
 check('Events parsed == grep -c BEGIN:VEVENT',
@@ -83,12 +87,17 @@ const A = app.buildCleaned(doc, 'free', STAMP);
 const aEv  = vevents(A.text);
 const aAll = aEv.filter(isAllDayBlock);
 const aTim = aEv.filter(b => !isAllDayBlock(b));
+const aOpen = aAll.filter(b => !isClosed(b)), aClosed = aAll.filter(isClosed);
 
 /* --- rows 3 & 4 --- */
-check('Mode A: all-day with TRANSP:TRANSPARENT', 144,
-      aAll.filter(b => b.includes('TRANSP:TRANSPARENT')).length);
-check('Mode A: all-day with X-MICROSOFT-CDO-BUSYSTATUS:FREE', 144,
-      aAll.filter(b => b.includes('X-MICROSOFT-CDO-BUSYSTATUS:FREE')).length);
+check('Mode A: OPEN all-day with TRANSP:TRANSPARENT', nOpen,
+      aOpen.filter(b => b.includes('TRANSP:TRANSPARENT')).length);
+check('Mode A: OPEN all-day with X-MICROSOFT-CDO-BUSYSTATUS:FREE', nOpen,
+      aOpen.filter(b => b.includes('X-MICROSOFT-CDO-BUSYSTATUS:FREE')).length);
+check('Mode A: CLOSED (school-closed/break) days with TRANSP:OPAQUE', nClosed,
+      aClosed.filter(b => b.includes('TRANSP:OPAQUE')).length);
+check('Mode A: CLOSED days with X-MICROSOFT-CDO-BUSYSTATUS:OOF', nClosed,
+      aClosed.filter(b => b.includes('X-MICROSOFT-CDO-BUSYSTATUS:OOF')).length);
 
 /* --- row 5: timed events modified == 0 (byte-for-byte) --- */
 const timedDiff = srcTim.filter((b, i) => b.join('\n') !== destamp((aTim[i] || []).join('\n'))).length;
@@ -136,14 +145,15 @@ check('Mode A: no TRANSP on any timed event', 0,
       aTim.filter(b => b.some(l => /^TRANSP:/i.test(l))).length);
 check('Mode A: no CDO busystatus on any timed event', 0,
       aTim.filter(b => b.some(l => /^X-MICROSOFT-CDO-BUSYSTATUS:/i.test(l))).length);
-check('Mode A: reported changed count', 144, A.changed);
-check('Mode A: reported timedKept count', 144, A.timedKept);
+check('Mode A: reported changed (open) count', nOpen, A.changed);
+check('Mode A: reported closedBlocked count', nClosed, A.closedBlocked);
+check('Mode A: reported timedKept count', srcTim.length, A.timedKept);
 
 /* --- row 12: idempotency --- */
 const A2 = app.buildCleaned(app.parseIcs(A.text), 'free', STAMP);
 check('Mode A run twice: byte-identical output', true, A2.text === A.text);
 check('Mode A run twice: reported new changes', 0, A2.changed);
-check('Mode A run twice: reported already-correct', 144, A2.already);
+check('Mode A run twice: reported already-correct (open)', nOpen, A2.already);
 check('Mode A run twice: no duplicate TRANSP', 0,
       vevents(A2.text).filter(b => b.filter(l => /^TRANSP:/i.test(l)).length > 1).length);
 check('Mode A run twice: no duplicate CDO busystatus', 0,
@@ -155,17 +165,20 @@ check('Mode A run three times: still byte-identical', true, A3.text === A.text);
 /* ================= MODE B ================= */
 const B = app.buildCleaned(doc, 'strip', STAMP);
 const bEv = vevents(B.text);
-check('Mode B: remaining events', 144, bEv.length);
-check('Mode B: all remaining are timed', 0, bEv.filter(isAllDayBlock).length);
-check('Mode B: survivors unchanged apart from the import stamp', true,
-      destamp(bEv.map(b => b.join('\n')).join('|')) ===
+check('Mode B: remaining events (timed + closed days kept)', srcTim.length + nClosed, bEv.length);
+check('Mode B: only closed days remain among all-day', nClosed, bEv.filter(isAllDayBlock).length);
+check('Mode B: remaining closed days are OOF/OPAQUE', nClosed,
+      bEv.filter(isAllDayBlock).filter(b => b.includes('TRANSP:OPAQUE') && b.includes('X-MICROSOFT-CDO-BUSYSTATUS:OOF')).length);
+check('Mode B: timed survivors unchanged apart from the import stamp', true,
+      destamp(bEv.filter(b => !isAllDayBlock(b)).map(b => b.join('\n')).join('|')) ===
       srcTim.map(b => b.join('\n')).join('|'));
 check('Mode B: BEGIN:VEVENT == END:VEVENT',
       count(B.text, /^BEGIN:VEVENT/gm), count(B.text, /^END:VEVENT/gm));
 check('Mode B: VTIMEZONE blocks', 1, count(B.text, /^BEGIN:VTIMEZONE/gm));
 check('Mode B: every line ending is CRLF', true, crlfOk(B.text));
 check('Mode B: ends with END:VCALENDAR', true, /END:VCALENDAR\r\n$/.test(B.text));
-check('Mode B: reported removed count', 144, B.removed);
+check('Mode B: reported removed (open) count', nOpen, B.removed);
+check('Mode B: reported closedBlocked count', nClosed, B.closedBlocked);
 const B2 = app.buildCleaned(app.parseIcs(B.text), 'strip', STAMP);
 check('Mode B run twice: byte-identical output', true, B2.text === B.text);
 
@@ -303,8 +316,12 @@ if (fs.existsSync(ALT)) {
   check('2nd export: events parsed', count(alt, /^BEGIN:VEVENT/gm), altDoc.events.length);
   check('2nd export: all-day / timed split', '144/144',
         altDoc.events.filter(e => e.allDay).length + '/' + altDoc.events.filter(e => !e.allDay).length);
-  check('2nd export: TRANSP added to every all-day event', 144,
+  const altOpen = altDoc.events.filter(e => e.allDay && !app.isClosedDay(e.summary)).length;
+  const altClosed = altDoc.events.filter(e => e.allDay && app.isClosedDay(e.summary)).length;
+  check('2nd export: TRANSP:TRANSPARENT on every OPEN all-day event', altOpen,
         altEv.filter(isAllDayBlock).filter(b => b.includes('TRANSP:TRANSPARENT')).length);
+  check('2nd export: OPAQUE + OOF on every CLOSED day', altClosed,
+        altEv.filter(isAllDayBlock).filter(b => b.includes('TRANSP:OPAQUE') && b.includes('X-MICROSOFT-CDO-BUSYSTATUS:OOF')).length);
   check('2nd export: timed events unchanged apart from the stamp', 0,
         vevents(alt).filter(b => !isAllDayBlock(b))
           .filter((b, i) => b.join('\n') !== destamp((altEv.filter(x => !isAllDayBlock(x))[i] || []).join('\n'))).length);

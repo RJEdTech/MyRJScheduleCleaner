@@ -62,6 +62,10 @@ for (const file of files) {
   const srcAll = srcBlocks.filter(isAllDay);
   const srcTim = srcBlocks.filter(b => !isAllDay(b));
   const nAll = srcAll.length, nTim = srcTim.length;
+  const summOf = b => { const l = b.find(x => /^SUMMARY[;:]/i.test(x)); return l ? l.slice(l.indexOf(':') + 1) : ''; };
+  const isClosed = b => app.isClosedDay(summOf(b));
+  const srcClosed = srcAll.filter(isClosed), srcOpen = srcAll.filter(b => !isClosed(b));
+  const nClosed = srcClosed.length, nOpen = srcOpen.length;
 
   const doc = app.parseIcs(src);
   const A = app.buildCleaned(doc, 'free', STAMP);
@@ -75,17 +79,23 @@ for (const file of files) {
     nAll + '/' + nTim, doc.events.filter(e => e.allDay).length + '/' + doc.events.filter(e => !e.allDay).length);
   t('file not misdetected as truncated', false, doc.truncated);
 
-  /* mode A */
-  t('A: TRANSP added to every all-day event', nAll, aAll.filter(b => b.includes('TRANSP:TRANSPARENT')).length);
-  t('A: CDO busystatus added to every all-day event', nAll,
-    aAll.filter(b => b.includes('X-MICROSOFT-CDO-BUSYSTATUS:FREE')).length);
+  /* mode A — open day markers go free/transparent; School Closed / break days
+     go Out of Office (OPAQUE) so the whole day blocks. */
+  const aOpen = aAll.filter(b => !isClosed(b)), aClosed = aAll.filter(isClosed);
+  t('A: TRANSP:TRANSPARENT on every OPEN all-day event', nOpen, aOpen.filter(b => b.includes('TRANSP:TRANSPARENT')).length);
+  t('A: CDO FREE on every OPEN all-day event', nOpen, aOpen.filter(b => b.includes('X-MICROSOFT-CDO-BUSYSTATUS:FREE')).length);
+  t('A: TRANSP:OPAQUE on every CLOSED (school-closed/break) day', nClosed, aClosed.filter(b => b.includes('TRANSP:OPAQUE')).length);
+  t('A: CDO OOF on every CLOSED day', nClosed, aClosed.filter(b => b.includes('X-MICROSOFT-CDO-BUSYSTATUS:OOF')).length);
+  t('A: no closed day left transparent/free', 0,
+    aClosed.filter(b => b.includes('TRANSP:TRANSPARENT') || b.includes('X-MICROSOFT-CDO-BUSYSTATUS:FREE')).length);
   t('A: no TRANSP leaked onto a timed event', 0, aTim.filter(b => b.some(l => /^TRANSP:/i.test(l))).length);
   t('A: timed events unchanged apart from the stamp', 0,
     srcTim.filter((b, i) => b.join('\n') !== destamp((aTim[i] || []).join('\n'))).length);
-  t('A: all-day events changed ONLY by the added lines + stamp', 0,
+  t('A: all-day events changed ONLY by the busy/free lines + stamp', 0,
     srcAll.filter((b, i) => b.join('\n') !== destamp(
-      (aAll[i] || []).filter(l => !/^(TRANSP:TRANSPARENT|X-MICROSOFT-CDO-BUSYSTATUS:FREE)$/.test(l)).join('\n'))).length);
-  t('A: reported changed count', nAll, A.changed);
+      (aAll[i] || []).filter(l => !/^(TRANSP:(TRANSPARENT|OPAQUE)|X-MICROSOFT-CDO-(BUSYSTATUS|INTENDEDSTATUS):(FREE|OOF))$/.test(l)).join('\n'))).length);
+  t('A: reported free/changed count = open all-day', nOpen, A.changed);
+  t('A: reported closedBlocked count = closed all-day', nClosed, A.closedBlocked);
   t('A: reported timedKept count', nTim, A.timedKept);
 
   /* structural integrity */
@@ -105,7 +115,7 @@ for (const file of files) {
   t('A: folded continuation lines preserved', foldedCount(src.replace(/\r\n|\n|\r/g, '\r\n')), foldedCount(A.text));
   t('A: no inserted line lands on a fold boundary', 0,
     A.text.split('\r\n').filter((l, i, a) =>
-      /^(TRANSP:TRANSPARENT|X-MICROSOFT-CDO-BUSYSTATUS:FREE)$/.test(l) && /^[ \t]/.test(a[i + 1] || '')).length);
+      /^(TRANSP:(TRANSPARENT|OPAQUE)|X-MICROSOFT-CDO-(BUSYSTATUS|INTENDEDSTATUS):(FREE|OOF))$/.test(l) && /^[ \t]/.test(a[i + 1] || '')).length);
   t('A: LOCATION count preserved', propCount(src, 'LOCATION'), propCount(A.text, 'LOCATION'));
   t('A: DESCRIPTION count preserved', propCount(src, 'DESCRIPTION'), propCount(A.text, 'DESCRIPTION'));
   t('A: SUMMARY count preserved', propCount(src, 'SUMMARY'), propCount(A.text, 'SUMMARY'));
@@ -119,13 +129,19 @@ for (const file of files) {
   t('A: no duplicated TRANSP after re-run', 0,
     scan(A2.text).filter(b => b.filter(l => /^TRANSP:/i.test(l)).length > 1).length);
 
-  /* mode B */
+  /* mode B — strip the ordinary day markers, but KEEP the school-closed/break
+     days (blocked as OOF): blocking your day off is their whole purpose. */
   const bBlocks = scan(B.text);
-  t('B: remaining event count', nTim, bBlocks.length);
-  t('B: no all-day events remain', 0, bBlocks.filter(isAllDay).length);
-  t('B: survivors unchanged apart from the stamp', true,
-    destamp(bBlocks.map(b => b.join('\n')).join('|')) === srcTim.map(b => b.join('\n')).join('|'));
-  t('B: reported removed count', nAll, B.removed);
+  const bAll = bBlocks.filter(isAllDay);
+  t('B: remaining event count (timed + closed days kept)', nTim + nClosed, bBlocks.length);
+  t('B: only closed days remain among all-day', nClosed, bAll.length);
+  t('B: every remaining all-day event is a closed day', nClosed, bAll.filter(isClosed).length);
+  t('B: remaining closed days are OOF/OPAQUE', nClosed,
+    bAll.filter(b => b.includes('TRANSP:OPAQUE') && b.includes('X-MICROSOFT-CDO-BUSYSTATUS:OOF')).length);
+  t('B: timed survivors unchanged apart from the stamp', true,
+    destamp(bBlocks.filter(b => !isAllDay(b)).map(b => b.join('\n')).join('|')) === srcTim.map(b => b.join('\n')).join('|'));
+  t('B: reported removed count = open all-day', nOpen, B.removed);
+  t('B: reported closedBlocked count', nClosed, B.closedBlocked);
   t('B: CRLF throughout', true, crlfOnly(B.text));
   t('B: idempotent', true, app.buildCleaned(app.parseIcs(B.text), 'strip', STAMP).text === B.text);
 
