@@ -145,6 +145,28 @@ for (const file of files) {
   t('B: CRLF throughout', true, crlfOnly(B.text));
   t('B: idempotent', true, app.buildCleaned(app.parseIcs(B.text), 'strip', STAMP).text === B.text);
 
+  /* ---- part-time: "only here on the days I teach" ---- */
+  const isRed   = b => app.dayLabel(summOf(b)) === 'Red Day';
+  const isWhite = b => app.dayLabel(summOf(b)) === 'White Day';
+  const srcRed   = srcAll.filter(b => !isClosed(b) && isRed(b)).length;
+  const srcWhite = srcAll.filter(b => !isClosed(b) && isWhite(b)).length;
+  const PW = app.buildCleaned(doc, 'free', STAMP, 'one', 'white');   // teaches White => block Red
+  const pwAll = scan(PW.text).filter(isAllDay);
+  t('PT(white): offBlocked == source Red days', srcRed, PW.offBlocked);
+  t('PT(white): every Red day is Out of Office', srcRed,
+    pwAll.filter(b => isRed(b) && b.includes('X-MICROSOFT-CDO-BUSYSTATUS:OOF')).length);
+  t('PT(white): White days stay free', srcWhite,
+    pwAll.filter(b => isWhite(b) && b.includes('X-MICROSOFT-CDO-BUSYSTATUS:FREE')).length);
+  t('PT(white): school-closed days still blocked', nClosed,
+    pwAll.filter(isClosed).filter(b => b.includes('X-MICROSOFT-CDO-BUSYSTATUS:OOF')).length);
+  t('PT(white): timed events unchanged apart from the stamp', 0,
+    srcTim.filter((b,i) => b.join('\n') !== destamp((scan(PW.text).filter(x=>!isAllDay(x))[i]||[]).join('\n'))).length);
+  t('PT(white): idempotent', true,
+    app.buildCleaned(app.parseIcs(PW.text),'free',STAMP,'one','white').text === PW.text);
+  const PR = app.buildCleaned(doc, 'free', STAMP, 'one', 'red');     // teaches Red => block White
+  t('PT(red): offBlocked == source White days', srcWhite, PR.offBlocked);
+  t('PT(both/default): no off-days blocked', 0, app.buildCleaned(doc,'free',STAMP,'one','both').offBlocked);
+
   /* ---- import stamp ---- */
   const stamped = (A.text.match(new RegExp('^CATEGORIES:MyRJ Import,' + STAMP + '(,|$)', 'gm')) || []).length;
   t('stamp: dated label on every event exactly once', srcBlocks.length, stamped);
