@@ -47,8 +47,32 @@ Both, deliberately: `TRANSP` is the standard property, `X-MICROSOFT-CDO-BUSYSTAT
 what Outlook actually reads in practice. Timed events are **not touched** — they have
 no `TRANSP` either, and default-opaque is exactly right for a class block.
 
+**The one exception — days the teacher is off get *blocked*, not freed.** An all-day
+marker for a day the school is closed is the one all-day event you *want* to block, so
+central staff who still work that day don't book a meeting on it. Those are detected by
+`isClosedDay(summary)`:
+
+- summary contains **`SCHOOL CLOSED`** (Labor Day, Thanksgiving, MLK, Presidents' Day,
+  Good Friday, Easter Monday, St. John Francis Regis Day, Christmas/Summer Break, etc.), or
+- summary contains **`NO CLASSES`** *and* the word **`Break`** (Spring / Thanksgiving /
+  Fall / Christmas Break — the multi-day breaks a teacher is off for).
+
+Deliberately **not** matched: `In-Service Day - NO CLASSES` and retreat/testing "NO
+CLASSES" days — the teacher is on campus working those, like all faculty, so they stay
+free. For a closed day the tool strips any existing free/busy props and forces:
+
+```
+TRANSP:OPAQUE
+X-MICROSOFT-CDO-BUSYSTATUS:OOF
+X-MICROSOFT-CDO-INTENDEDSTATUS:OOF
+```
+
+so the whole day reads **Out of Office**. Closed days are kept and blocked in **both**
+modes (they are the point). Idempotent: a re-run strips and rewrites the same three lines.
+`buildCleaned` returns `closedBlocked` alongside `changed`.
+
 **B — Remove them entirely.** Drop all-day `VEVENT`s, for people who already subscribe
-to the Red Day / White Day calendars separately.
+to the Red Day / White Day calendars separately. (Closed days are still kept and blocked.)
 
 ## Implementation notes
 

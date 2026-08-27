@@ -1136,7 +1136,7 @@
         <input type="radio" name="mode" value="free" checked>
         <span class="path-badge">Recommended</span>
         <span class="path-title">Keep them, stop them blocking my time</span>
-        <span class="path-desc">Red and White days still appear in your calendar and on your phone. They just no longer make you look busy. Nothing is thrown away.</span>
+        <span class="path-desc">Red and White days still appear in your calendar and on your phone. They just no longer make you look busy. Nothing is thrown away. <b>Days the school is closed</b> (holidays and breaks) are the exception &mdash; those block your whole day as <b>Out of Office</b>, so no one books you when you're off.</span>
       </label>
       <label class="path-card" id="modeStrip">
         <input type="radio" name="mode" value="strip">
@@ -1421,7 +1421,7 @@
     <p>Outlook's calendar can be turned into a sortable table, which makes this one selection instead of hundreds of clicks. This needs <b>classic Outlook</b> &mdash; new Outlook and the web version have no List view. If you're in new Outlook, switch the <b>New Outlook</b> toggle off (top right) before you start; there's more on that at the bottom of this section.</p>
     <ol>
       <li>Open <b>Calendar</b> in Outlook</li>
-      <li><b>View</b> tab &rarr; <b>Change View</b> &rarr; <b>List</b><span class="tip">The step most people have never used. It turns the calendar into a flat, sortable list of every appointment you have.</span></li>
+      <li><b>View</b> tab &rarr; <b>Change View</b> &rarr; <b>List</b><span class="tip">The step most people have never used. It turns the calendar into a flat, sortable list of every appointment you have &mdash; <b>past and future</b>. Use <b>List</b>, not <b>Active</b>: the Active view hides events that have already happened, so deleting from it would leave your past imported days behind. (Active is handy for a different reason &mdash; it shows the <code class="stamp-name">MyRJ Import 2026-08</code> category on every row, so it&rsquo;s a quick way to confirm the import landed.)</span></li>
       <li><b>Find the batch</b> using one of the three handles below &mdash; they all gather the imported events into one contiguous block</li>
       <li>Click the <b>first</b> event in the block, then <b>Shift+click</b> the <b>last</b></li>
       <li>Read down the <b>Subject</b> column and confirm it's all class blocks and Red/White day markers</li>
@@ -1815,9 +1815,20 @@ function leadLabels(it, labelMode, plan){
   return out;
 }
 
+/* Days the school is closed and you're OFF — holidays tagged "SCHOOL CLOSED"
+   and the multi-day breaks ("... Break ... NO CLASSES"). These are the one
+   all-day event we deliberately BLOCK (Out of Office) so central staff can't
+   book the day. An "In-Service ... NO CLASSES" day is not a break, so it stays
+   free — you're working that day. */
+function isClosedDay(summary){
+  var s = String(summary || "");
+  if(/SCHOOL CLOSED/i.test(s)) return true;
+  if(/NO CLASSES/i.test(s) && /break/i.test(s)) return true;
+  return false;
+}
 function buildCleaned(doc, mode, stamp, labelMode){
   var out = [];
-  var changed = 0, already = 0, removed = 0, timedKept = 0, allDayKept = 0, skipped = 0;
+  var changed = 0, already = 0, removed = 0, timedKept = 0, allDayKept = 0, skipped = 0, closedBlocked = 0;
   if(stamp === undefined) stamp = makeStamp();
   var labels = {}, order = [];
   var plan = labelPlan(doc);
@@ -1832,7 +1843,10 @@ function buildCleaned(doc, mode, stamp, labelMode){
     if(it.kind === "raw"){ out.push(it.line); continue; }
     var lead = leadLabels(it, labelMode, plan);
     if(!it.allDay){ timedKept++; tally(lead[0]); pushAll(out, applyStamp(it.lines, stamp, lead)); continue; }
-    if(mode === "strip"){ removed++; continue; }
+    var closed = isClosedDay(it.summary);
+    /* Strip mode removes the ordinary day markers, but a School Closed / break
+       day is the one all-day event we always keep — its whole job is to block. */
+    if(!closed && mode === "strip"){ removed++; continue; }
     allDayKept++;
     tally(lead[0]);
 
@@ -1844,6 +1858,26 @@ function buildCleaned(doc, mode, stamp, labelMode){
       if(/^END:VEVENT\s*$/i.test(lines[j])){ at = j; break; }
     }
     if(at < 1){ skipped++; pushAll(out, it.lines); continue; }
+
+    if(closed){
+      /* School closed / break you're off for: force Out of Office so the whole
+         day blocks and nobody books you. Strip any existing free/busy props
+         first — the feed leaves them off (defaulting to busy), and a prior run
+         of this tool may have wrongly marked the day free. */
+      var kept = [];
+      for(var c=0;c<at;c++){
+        if(/^TRANSP[;:]/i.test(lines[c])) continue;
+        if(/^X-MICROSOFT-CDO-(BUSYSTATUS|INTENDEDSTATUS)[;:]/i.test(lines[c])) continue;
+        kept.push(lines[c]);
+      }
+      pushAll(out, kept);
+      out.push("TRANSP:OPAQUE");                     // OPAQUE blocks the day
+      out.push("X-MICROSOFT-CDO-BUSYSTATUS:OOF");    // shows Out of Office in Outlook
+      out.push("X-MICROSOFT-CDO-INTENDEDSTATUS:OOF");
+      pushAll(out, lines.slice(at));
+      closedBlocked++;
+      continue;
+    }
 
     var hasTransp = false, hasCdo = false;
     for(var k=0;k<lines.length;k++){
@@ -1870,7 +1904,7 @@ function buildCleaned(doc, mode, stamp, labelMode){
   labelList.sort(function(a,b){ return b.count - a.count; });
 
   return { text:text, changed:changed, already:already, removed:removed,
-           timedKept:timedKept, allDayKept:allDayKept, skipped:skipped,
+           timedKept:timedKept, allDayKept:allDayKept, skipped:skipped, closedBlocked:closedBlocked,
            stamp:stamp, labels:labelList };
 }
 function pushAll(target, arr){ for(var i=0;i<arr.length;i++) target.push(arr[i]); }
@@ -2133,15 +2167,18 @@ function init(){
 
     var desc;
     if(mode === "free"){
-      if(res.changed === 0 && res.allDayKept === 0){
+      var parts = [];
+      if(res.changed) parts.push("<b>"+res.changed+" all-day events</b> marked as free &mdash; they still show, but no longer block your time");
+      if(res.closedBlocked) parts.push("<b>"+res.closedBlocked+" school-closed day"+(res.closedBlocked>1?"s":"")+"</b> set to <b>Out of Office</b>, so your whole day is blocked and no one books you when you're off");
+      if(!parts.length){
         desc = "Nothing needed changing. <b>"+res.timedKept+"</b> timed events passed through untouched.";
       }else{
-        desc = "<b>"+res.changed+" all-day events</b> marked as free &mdash; they still show, but no longer block your time. "+
-               "<b>"+res.timedKept+" timed events</b> left exactly as they are, so your classes still make you unavailable.";
+        desc = parts.join(". ") + ". <b>"+res.timedKept+" timed events</b> left exactly as they are, so your classes still make you unavailable.";
         if(res.already) desc += " "+res.already+" were already marked free and were left alone.";
       }
     }else{
       desc = "<b>"+res.removed+" all-day events removed.</b> <b>"+res.timedKept+" timed events</b> kept.";
+      if(res.closedBlocked) desc += " <b>"+res.closedBlocked+" school-closed day"+(res.closedBlocked>1?"s":"")+"</b> kept and set to Out of Office so your day still blocks.";
     }
     if(res.skipped) desc += " "+res.skipped+" incomplete event(s) were passed through untouched.";
 
@@ -2237,7 +2274,7 @@ if(typeof module !== "undefined" && module.exports){
                      /* label machinery — exported so the suites can unit-test the
                         grouping rules directly instead of inferring them from output */
                      applyStamp:applyStamp, foldLine:foldLine, dedupe:dedupe,
-                     parseCourse:parseCourse, dayLabel:dayLabel, safeCategory:safeCategory,
+                     parseCourse:parseCourse, dayLabel:dayLabel, safeCategory:safeCategory, isClosedDay:isClosedDay,
                      labelPlan:labelPlan, leadLabels:leadLabels, makeStamp:makeStamp,
                      STAMP_BASE:STAMP_BASE };
 }
