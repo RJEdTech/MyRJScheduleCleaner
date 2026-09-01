@@ -82,7 +82,52 @@ props as a closed day). `"white"` blocks every `Red Day`; `"red"` blocks every
 In-Service / retreat / testing / IMPACT days are unaffected (not a Red/White rotation
 day), and `"both"` changes nothing — so the default is a no-op for everyone full-time.
 `buildCleaned` returns `offBlocked` alongside `closedBlocked`. In the page it's the
-"Are you here every day, or only when you teach?" option.
+"Are you here every day, or only when you teach?" question — which sits in Step 3 in the
+open, not behind the options toggle, because it is the one question on the page with no
+safe default.
+
+**Rebuilding the days the feed never sent (`rotationPlan`).** Re-flagging is not enough on
+its own, and this is the failure that matters. **MyRJ emits a day-type marker only on days
+you have something scheduled**, so a teacher who is here only on her teaching rotation
+receives almost none of the *other* colour's days — precisely the days she needs blocked.
+Measured on a real part-time export: **82 Red days in the year, 27 of them present in her
+file.** The other 55 were invisible, and a `teachDays` run alone produced a file that looked
+finished while two-thirds of her year still read as free.
+
+`rotationPlan(doc, teachDays)` reconstructs them from the file itself. It leans on one fact:
+she teaches *every* day of her colour, so every day of her colour is in the file.
+
+1. `dayLabel` matches `Red Day` / `White Day` **anywhere in the title**, not just as a
+   prefix. This is what catches `2RW Semester Exam & Red Day Review Classes` — a real Red
+   day wearing an exam title, and the difference between 78/82 and 82/82.
+2. An unmarked school weekday whose immediately-preceding **or** following weekday carries a
+   marker of the teaching colour is an off day → rebuild it.
+3. A day that already carries any marker is never touched. Every holiday and break in the
+   feed carries one, so the rebuild cannot land on one; those block via `isClosedDay`
+   instead, for their own reason.
+
+Rule 2 beats a run-length heuristic ("two or more blank weekdays is a break"): winter break
+is excluded because its neighbours are exam days and blanks, while a Red day at the *tail*
+of that break is recovered because the next school day is a marked White day. The scan
+starts a week early, which reaches back **exactly one weekday** before the first day the
+feed knows about — the first day of school precedes a part-timer's first class. That
+boundary day is the one place the tool blocks a day it cannot prove is a school day;
+deliberate, because the alternative is leaving the first day of the year showing her free.
+
+Rebuilt days are appended before `END:VCALENDAR` as all-day `VEVENT`s titled
+`Not teaching - Red Day`, carrying the same OOF trio as a closed day, the normal import
+labels for deletion, and a deterministic `UID` (`myrj-off-<YYYYMMDD>@rjedtech.local`) plus
+the feed's own `DTSTAMP` — so running the tool on its own output is byte-for-byte a no-op.
+`buildCleaned` returns `offAdded`.
+
+**Two guardrails, because a rebuild is a guess when the pattern isn't clean.** The rebuilt
+sequence must strictly alternate across every unbroken run of rotation days (a closed day,
+an exam day or a break legitimately interrupts it and resets the check), and no single-day
+hole may survive the rebuild inside the range the feed covers — one that does means a day of
+*her* colour is missing too, so she isn't in for all of them. Either failure and
+`rotationPlan` returns nothing at all rather than inventing days; `buildCleaned` reports
+`rotBroken` and the page says so in plain English instead of shipping a file built on a
+guess. A full-timer (`"both"`) rebuilds nothing, so the default remains a no-op.
 
 ## Implementation notes
 
@@ -212,14 +257,23 @@ more than 600 events.
 
 ## Tests
 
-Three harnesses, all exercising the **shipped** `index.html` — the suites extract and evaluate
+Four harnesses, all exercising the **shipped** `index.html` — the suites extract and evaluate
 the actual `<script>` block rather than a reimplementation.
 
 ```bash
+node test/rotation.js                                                         # self-contained
 node test/verify.js "School Calendars.ics" Schedule.ics "Class Events.ics"   # any export
 node test/acceptance.js Schedule.ics                                          # spec + design system
 npm install playwright && node test/e2e.js Schedule.ics                       # real browser
 ```
+
+- **`rotation.js`** — 22 checks, no input file needed. Builds a synthetic school year with a
+  one-day holiday, a multi-day break and an exam week, hands the tool only the slice MyRJ
+  would really send a White-day teacher, and asserts the rebuild recovers every Red day and
+  invents none: no White day blocked, no break day invented, exam days untouched, the
+  boundary day bounded to one, idempotent, and an irregular part-timer detected and
+  declined. Synthetic on purpose — the bug was found on a real teacher's export, and a real
+  export does not belong in a public repo.
 
 - **`verify.js`** — derives every expectation from an independent scan of whatever file it's
   given, so it works on any feed. 53 checks per file: transform correctness in both modes,
@@ -235,7 +289,17 @@ npm install playwright && node test/e2e.js Schedule.ics                       # 
 Verified against four real exports — `Schedule` (288 events), `My Calendars` (288),
 `Class Events` (0), and `School Calendars` (1,735 events with 40 folded lines,
 `LOCATION` on 1,302 and `DESCRIPTION` on 61) — plus synthetic empty and single-event feeds.
-**53 + 137 + 40 checks, all passing** (`verify` + `acceptance` + `e2e`).
+`verify.js` additionally checks the part-time path on any export: rebuilt days are all-day,
+Out of Office, on weekdays, never colliding with a day already in the file, and a second run
+rebuilds nothing new.
+
+**Current state, and it is not all green.** `rotation.js` passes 22/22 and `verify.js` passes
+140/142 on `Schedule-test.ics` + a real part-time export. The two `verify` failures are
+pre-existing fixture gaps in `Schedule-test.ics` (two events carry no `CATEGORIES`), not
+regressions. **`acceptance.js` and `e2e.js` have been failing since the v2.0 wizard shipped** —
+they assert against the old `sec1`–`sec5` markup, the workflow strip and both download routes,
+all of which the wizard replaced. They need rewriting to the `step1`–`step6` IDs before either
+is worth trusting.
 
 ### Deleting a previous import
 

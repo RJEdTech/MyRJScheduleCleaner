@@ -153,8 +153,33 @@ for (const file of files) {
   const PW = app.buildCleaned(doc, 'free', STAMP, 'one', 'white');   // teaches White => block Red
   const pwAll = scan(PW.text).filter(isAllDay);
   t('PT(white): offBlocked == source Red days', srcRed, PW.offBlocked);
-  t('PT(white): every Red day is Out of Office', srcRed,
+  /* The rebuilt days are Red days too, so the expectation is what the feed
+     carried PLUS what the tool reconstructed. */
+  t('PT(white): every Red day is Out of Office', srcRed + PW.offAdded,
     pwAll.filter(b => isRed(b) && b.includes('X-MICROSOFT-CDO-BUSYSTATUS:OOF')).length);
+  t('PT(white): rebuilt days are all-day, OOF, weekdays, and new dates', true, (() => {
+    const had = new Set(srcAll.map(b => (/(\d{8})/.exec(b.find(l => /^DTSTART/i.test(l))) || [])[1]));
+    const gen = scan(PW.text).filter(b => b.some(l => /^UID:myrj-off-/.test(l)));
+    if (gen.length !== PW.offAdded) return 'count ' + gen.length + ' != ' + PW.offAdded;
+    const seen = new Set();
+    for (const b of gen) {
+      const y = (/DTSTART;VALUE=DATE:(\d{8})/.exec(b.join('\n')) || [])[1];
+      if (!y) return 'no DTSTART';
+      if (had.has(y)) return 'collides with an existing day: ' + y;
+      if (seen.has(y)) return 'duplicate day: ' + y;
+      seen.add(y);
+      const dow = new Date(Date.UTC(+y.slice(0,4), +y.slice(4,6)-1, +y.slice(6,8))).getUTCDay();
+      if (dow === 0 || dow === 6) return 'weekend day: ' + y;
+      if (!b.includes('X-MICROSOFT-CDO-BUSYSTATUS:OOF')) return 'not OOF: ' + y;
+      if (!b.includes('TRANSP:OPAQUE')) return 'not opaque: ' + y;
+      if (!isAllDay(b)) return 'not all-day: ' + y;
+    }
+    return true;
+  })());
+  t('PT(both/default): nothing is ever rebuilt for a full-timer', 0,
+    app.buildCleaned(doc, 'free', STAMP, 'one', 'both').offAdded);
+  t('PT(white): a second run rebuilds nothing new', 0,
+    app.buildCleaned(app.parseIcs(PW.text), 'free', STAMP, 'one', 'white').offAdded);
   t('PT(white): White days stay free', srcWhite,
     pwAll.filter(b => isWhite(b) && b.includes('X-MICROSOFT-CDO-BUSYSTATUS:FREE')).length);
   t('PT(white): school-closed days still blocked', nClosed,

@@ -1125,6 +1125,26 @@
     <div class="wstep-body">
       <p class="wlead">Here's what's in your file. The all-day markers are what make you look busy &mdash; cleaning fixes those and leaves your classes alone.</p>
       <div class="stat-grid" id="stats"></div>
+      <div class="opt-label">Are you here every day, or only when you teach?</div>
+      <p class="opt-help">This is the one thing the file can't tell us. Most teachers are here every day &mdash; leave it on <b>Every school day</b>. If you're <b>part-time</b> and only come in on your teaching rotation, the tool blocks the days you're <i>not</i> here as <b>Out of Office</b>, so no one books you then &mdash; including the days MyRJ never sent you, which is most of them.</p>
+      <div class="path-grid" id="teachDays">
+        <label class="path-card is-selected" id="teachBoth">
+          <input type="radio" name="teachDays" value="both" checked>
+          <span class="path-badge">Most people</span>
+          <span class="path-title">I'm here every school day</span>
+          <span class="path-desc">Full-time. Red and White days both stay free &mdash; your class blocks are what show you busy.</span>
+        </label>
+        <label class="path-card" id="teachWhite">
+          <input type="radio" name="teachDays" value="white">
+          <span class="path-title">I only teach on White (W) days</span>
+          <span class="path-desc">Part-time. Every <b>Red day</b> in the year is blocked as <b>Out of Office</b> &mdash; you're not here, so no one books you. White days stay free.</span>
+        </label>
+        <label class="path-card" id="teachRed">
+          <input type="radio" name="teachDays" value="red">
+          <span class="path-title">I only teach on Red (R) days</span>
+          <span class="path-desc">Part-time. Every <b>White day</b> in the year is blocked as <b>Out of Office</b>. Red days stay free.</span>
+        </label>
+      </div>
       <p class="subline">The recommended settings are already chosen. Most people just press <b>Clean my file</b>.</p>
       <div class="action-row"><button class="btn bigbtn" id="btnRun" type="button">Clean my file</button></div>
       <details class="explainer"><summary>Change the options &mdash; colors, or remove the markers</summary>
@@ -1159,27 +1179,6 @@
         <input type="radio" name="labelMode" value="class">
         <span class="path-title">A colour for each class</span>
         <span class="path-desc">Each course gets its own label, and Red days, White days and holidays get theirs. You pick <b>a colour for each one</b>, so your week reads at a glance. Every section of a course shares a label &mdash; you colour a prep, not a period. Teach the same course in both divisions and those split into <code>(BD)</code> and <code>(GD)</code>. Worth knowing: that's usually six to nine labels to colour by hand in Outlook, one at a time. The exact list appears after you clean the file.</span>
-      </label>
-    </div>
-
-    <div class="opt-label">Are you here every day, or only when you teach?</div>
-    <p class="opt-help">Most teachers are here every day &mdash; leave this on <b>Every school day</b>. If you're <b>part-time</b> and only come in on your teaching rotation, the tool marks the days you're <i>not</i> here as <b>Out of Office</b>, so no one books you then.</p>
-    <div class="path-grid" id="teachDays">
-      <label class="path-card is-selected" id="teachBoth">
-        <input type="radio" name="teachDays" value="both" checked>
-        <span class="path-badge">Most people</span>
-        <span class="path-title">I'm here every school day</span>
-        <span class="path-desc">Full-time. Red and White days both stay free &mdash; your class blocks are what show you busy.</span>
-      </label>
-      <label class="path-card" id="teachWhite">
-        <input type="radio" name="teachDays" value="white">
-        <span class="path-title">I only teach on White (W) days</span>
-        <span class="path-desc">Part-time. Every <b>Red day</b> is blocked as <b>Out of Office</b> &mdash; you're not here, so no one books you. White days stay free.</span>
-      </label>
-      <label class="path-card" id="teachRed">
-        <input type="radio" name="teachDays" value="red">
-        <span class="path-title">I only teach on Red (R) days</span>
-        <span class="path-desc">Part-time. Every <b>White day</b> is blocked as <b>Out of Office</b>. Red days stay free.</span>
       </label>
     </div>
 
@@ -1809,6 +1808,12 @@ function dayLabel(summary){
   var low = s.toLowerCase();
   if(low.indexOf("white day") === 0) return "White Day";
   if(low.indexOf("red day") === 0)   return "Red Day";
+  /* Some rotation days hide the colour mid-title rather than leading with
+     it — "2RW Semester Exam & Red Day Review Classes" is a Red Day. A
+     prefix test misses those, and for a part-timer a missed rotation day
+     is a day she shows free when she isn't there. */
+  if(low.indexOf("white day") !== -1) return "White Day";
+  if(low.indexOf("red day")   !== -1) return "Red Day";
   return "School Calendar";
 }
 
@@ -1847,9 +1852,160 @@ function isClosedDay(summary){
   if(/NO CLASSES/i.test(s) && /break/i.test(s)) return true;
   return false;
 }
+/* ---------- rotation reconstruction ---------------------------------
+   MyRJ emits a day-type marker only on days you have something
+   scheduled. A teacher who is here only on her teaching rotation
+   therefore receives almost none of the OTHER colour's days — which are
+   precisely the days she needs blocked. Re-flagging what the file
+   contains cannot fix that; the missing days have to be rebuilt.
+
+   Measured on a real part-time export: 82 Red days in the year, 27 of
+   them present in her feed. The other 55 were invisible.
+
+   The rebuild leans on one fact: she teaches EVERY day of her colour, so
+   every day of her colour is in the file. An unmarked school weekday
+   sitting next to one can only be the other colour. A multi-day run of
+   unmarked weekdays is a break, and stays empty.
+   -------------------------------------------------------------------- */
+var DAY_MS = 86400000;
+
+function ymdOf(block){
+  var raw = getFolded(block, "DTSTART");
+  var m = /(\d{4})(\d{2})(\d{2})/.exec(raw);
+  return m ? (m[1] + m[2] + m[3]) : "";
+}
+function ymdToUTC(ymd){
+  return Date.UTC(+ymd.slice(0,4), +ymd.slice(4,6) - 1, +ymd.slice(6,8));
+}
+function utcToYmd(ms){
+  var d = new Date(ms), mm = d.getUTCMonth() + 1, dd = d.getUTCDate();
+  return "" + d.getUTCFullYear() + (mm < 10 ? "0" : "") + mm + (dd < 10 ? "0" : "") + dd;
+}
+
+/* Work out which days are missing, and whether the file is regular
+   enough to trust. Returns { add:[ymd...], teach, off, present, broken }.
+   `broken` counts places where the rebuilt rotation fails to alternate —
+   any at all and we decline to generate rather than invent days for
+   someone whose pattern isn't a clean single colour. */
+function rotationPlan(doc, teachDays){
+  var res = { add: [], teach: null, off: null, present: 0, broken: 0, scanned: 0 };
+  if(teachDays !== "white" && teachDays !== "red") return res;
+  res.teach = teachDays === "white" ? "White Day" : "Red Day";
+  res.off   = teachDays === "white" ? "Red Day"   : "White Day";
+
+  var byDay = {}, min = null, max = null, i;
+  for(i=0;i<doc.events.length;i++){
+    var ev = doc.events[i];
+    if(!ev.allDay) continue;
+    var ymd = ymdOf(ev.lines);
+    if(!ymd) continue;
+    var lab = isClosedDay(ev.summary) ? "Closed" : dayLabel(ev.summary);
+    /* A day can carry several markers; a rotation colour outranks the rest. */
+    if(!byDay[ymd] || lab === "White Day" || lab === "Red Day") byDay[ymd] = lab;
+    if(min === null || ymd < min) min = ymd;
+    if(max === null || ymd > max) max = ymd;
+  }
+  if(min === null) return res;
+
+  /* Start a week early: the first day of school precedes a part-timer's
+     first class, so it is absent from her file and still needs blocking. */
+  var seq = [];
+  for(var ms = ymdToUTC(min) - 7 * DAY_MS; ms <= ymdToUTC(max); ms += DAY_MS){
+    var dow = new Date(ms).getUTCDay();
+    if(dow === 0 || dow === 6) continue;          // weekends are nobody's rotation
+    var k = utcToYmd(ms);
+    seq.push({ ymd: k, mark: byDay[k] || null });
+  }
+  res.scanned = seq.length;
+
+  /* Decide from the ORIGINAL marks so a generated day can never seed
+     another one — the rebuild spreads from what the feed actually said. */
+  var was = [];
+  for(i=0;i<seq.length;i++) was.push(seq[i].mark);
+  for(i=0;i<seq.length;i++){
+    if(was[i]){ if(was[i] === res.off) res.present++; continue; }
+    var prev = i > 0 ? was[i-1] : null;
+    var next = i + 1 < seq.length ? was[i+1] : null;
+    if(prev === res.teach || next === res.teach){
+      seq[i].mark = res.off;
+      res.add.push(seq[i].ymd);
+    }
+  }
+
+  /* Sanity check, two ways. Both exist to catch the same thing: a teacher
+     whose pattern is not "every day of one colour," where a rebuild would
+     be guessing. We would rather block nothing extra and say so.
+
+     One — Red and White strictly alternate, but only across an unbroken
+     run of rotation days. Exam week, a closed day or a break legitimately
+     interrupts the pattern, so those reset the check instead of failing it. */
+  var prevCol = null;
+  for(i=0;i<seq.length;i++){
+    var m = seq[i].mark;
+    if(m === "White Day" || m === "Red Day"){
+      if(prevCol === m) res.broken++;
+      prevCol = m;
+    }else{
+      prevCol = null;
+    }
+  }
+
+  /* Two — after the rebuild, no single-day hole should be left. In a clean
+     part-time file every isolated gap is a day of the other colour and has
+     just been filled; one that survives means a day of HER colour is
+     missing too, so she isn't in for all of them and the rebuild can't be
+     trusted. Checked only inside the range the feed actually covers, so
+     the week scanned ahead of it can't register as a hole. */
+  for(i=0;i<seq.length;i++){
+    if(seq[i].mark) continue;
+    if(seq[i].ymd < min || seq[i].ymd > max) continue;
+    var before = i > 0 ? seq[i-1].mark : null;
+    var after  = i + 1 < seq.length ? seq[i+1].mark : null;
+    if(before && after) res.broken++;
+  }
+
+  if(res.broken) res.add = [];
+  return res;
+}
+
+/* Reuse the feed's own DTSTAMP so re-running the tool produces the same
+   bytes rather than a fresh timestamp on every pass. */
+function feedStamp(doc){
+  for(var i=0;i<doc.events.length;i++){
+    var b = doc.events[i].lines;
+    for(var j=0;j<b.length;j++){
+      var m = /^DTSTAMP:(\S+)\s*$/i.exec(b[j]);
+      if(m) return m[1];
+    }
+  }
+  return "20260101T000000Z";
+}
+
+/* One rebuilt day, blocked as Out of Office. Property order matters: the
+   free/busy trio sits last, which is exactly where the block path in
+   buildCleaned rewrites it, so running the tool on its own output is a
+   no-op instead of shuffling lines. */
+function offDayEvent(ymd, name, stamp, lead, dtstamp){
+  var lines = [
+    "BEGIN:VEVENT",
+    "UID:myrj-off-" + ymd + "@rjedtech.local",
+    "DTSTAMP:" + dtstamp,
+    "DTSTART;VALUE=DATE:" + ymd,
+    "DTEND;VALUE=DATE:" + utcToYmd(ymdToUTC(ymd) + DAY_MS),
+    "SUMMARY:Not teaching - " + name,
+    "CATEGORIES:",
+    "X-MICROSOFT-CDO-ALLDAYEVENT:TRUE",
+    "CLASS:PUBLIC",
+    "TRANSP:OPAQUE",
+    "X-MICROSOFT-CDO-BUSYSTATUS:OOF",
+    "X-MICROSOFT-CDO-INTENDEDSTATUS:OOF",
+    "END:VEVENT"];
+  return applyStamp(lines, stamp, lead);
+}
+
 function buildCleaned(doc, mode, stamp, labelMode, teachDays){
   var out = [];
-  var changed = 0, already = 0, removed = 0, timedKept = 0, allDayKept = 0, skipped = 0, closedBlocked = 0, offBlocked = 0;
+  var changed = 0, already = 0, removed = 0, timedKept = 0, allDayKept = 0, skipped = 0, closedBlocked = 0, offBlocked = 0, offAdded = 0, rotBroken = 0;
   if(stamp === undefined) stamp = makeStamp();
   if(teachDays === undefined) teachDays = "both";
   var labels = {}, order = [];
@@ -1922,6 +2078,28 @@ function buildCleaned(doc, mode, stamp, labelMode, teachDays){
     if(!hasTransp || !hasCdo) changed++; else already++;
   }
 
+  /* Rebuild and append the rotation days the feed never sent. Without
+     this the part-time option only blocks the fraction of days that
+     happened to carry an IMPACT or late-start marker, and the file looks
+     finished while most of the year still reads as free. */
+  var rot = rotationPlan(doc, teachDays);
+  rotBroken = rot.broken;
+  if(rot.add.length){
+    var glead = labelMode === "class" ? [rot.off] : [];
+    var dts = feedStamp(doc), gen = [];
+    for(var g=0; g<rot.add.length; g++){
+      pushAll(gen, offDayEvent(rot.add[g], rot.off, stamp, glead, dts));
+      tally(glead[0]);
+    }
+    var endAt = -1;
+    for(var q = out.length - 1; q >= 0; q--){
+      if(/^END:VCALENDAR\s*$/i.test(out[q])){ endAt = q; break; }
+    }
+    if(endAt === -1) pushAll(out, gen);
+    else out = out.slice(0, endAt).concat(gen, out.slice(endAt));
+    offAdded = rot.add.length;
+  }
+
   /* Normalise line endings to CRLF — required by RFC 5545, and Outlook
      is fussier about it than the spec is. Trim trailing blank lines so
      re-running the tool can't grow the file by one line each pass. */
@@ -1934,6 +2112,7 @@ function buildCleaned(doc, mode, stamp, labelMode, teachDays){
 
   return { text:text, changed:changed, already:already, removed:removed,
            timedKept:timedKept, allDayKept:allDayKept, skipped:skipped, closedBlocked:closedBlocked, offBlocked:offBlocked,
+           offAdded:offAdded, rotBroken:rotBroken,
            stamp:stamp, labels:labelList };
 }
 function pushAll(target, arr){ for(var i=0;i<arr.length;i++) target.push(arr[i]); }
@@ -2203,6 +2382,7 @@ function init(){
       if(res.changed) parts.push("<b>"+res.changed+" all-day events</b> marked as free &mdash; they still show, but no longer block your time");
       if(res.closedBlocked) parts.push("<b>"+res.closedBlocked+" school-closed day"+(res.closedBlocked>1?"s":"")+"</b> set to <b>Out of Office</b>, so your whole day is blocked and no one books you when you're off");
       if(res.offBlocked) parts.push("<b>"+res.offBlocked+" "+offName+" day"+(res.offBlocked>1?"s":"")+"</b> set to <b>Out of Office</b> &mdash; the days you don't teach, so no one books you then");
+      if(res.offAdded) parts.push("<b>"+res.offAdded+" more "+offName+" day"+(res.offAdded>1?"s":"")+"</b> rebuilt and added, also <b>Out of Office</b> &mdash; MyRJ only sends a day marker where you have something scheduled, so most of your non-teaching days were missing from the file entirely");
       if(!parts.length){
         desc = "Nothing needed changing. <b>"+res.timedKept+"</b> timed events passed through untouched.";
       }else{
@@ -2213,8 +2393,12 @@ function init(){
       desc = "<b>"+res.removed+" all-day events removed.</b> <b>"+res.timedKept+" timed events</b> kept.";
       if(res.closedBlocked) desc += " <b>"+res.closedBlocked+" school-closed day"+(res.closedBlocked>1?"s":"")+"</b> kept and set to Out of Office so your day still blocks.";
       if(res.offBlocked) desc += " <b>"+res.offBlocked+" "+offName+" day"+(res.offBlocked>1?"s":"")+"</b> kept and set to Out of Office (the days you don't teach).";
+      if(res.offAdded) desc += " <b>"+res.offAdded+" more "+offName+" day"+(res.offAdded>1?"s":"")+"</b> rebuilt and added as Out of Office &mdash; they were missing from the feed.";
     }
     if(res.skipped) desc += " "+res.skipped+" incomplete event(s) were passed through untouched.";
+    /* The rebuild assumes you are in for EVERY day of your colour. When the
+       file says otherwise, say so instead of inventing days. */
+    if(res.rotBroken) desc += " <b>One thing to check:</b> your Red/White days don't fall in a regular alternating pattern in this file, so the missing days were <b>not</b> rebuilt &mdash; only the days MyRJ actually sent were blocked. If you're part-time on an irregular schedule, email Jason Beyer and he'll build the file by hand.";
 
     var labelHtml = "";
     if(res.labels && res.labels.length){
@@ -2309,6 +2493,7 @@ if(typeof module !== "undefined" && module.exports){
                         grouping rules directly instead of inferring them from output */
                      applyStamp:applyStamp, foldLine:foldLine, dedupe:dedupe,
                      parseCourse:parseCourse, dayLabel:dayLabel, safeCategory:safeCategory, isClosedDay:isClosedDay,
+                     rotationPlan:rotationPlan, offDayEvent:offDayEvent, ymdOf:ymdOf, feedStamp:feedStamp,
                      labelPlan:labelPlan, leadLabels:leadLabels, makeStamp:makeStamp,
                      STAMP_BASE:STAMP_BASE };
 }
