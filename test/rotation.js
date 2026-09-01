@@ -158,6 +158,40 @@ t('a rotation day named mid-title is recognised', 'Red Day',
 t('a plain exam day is still not a rotation day', 'School Calendar',
   app.dayLabel('3R & 4R Semester Exams (RJHS)'));
 
+/* ---------- who gets asked ------------------------------------------
+   teachSplit decides whether the page ASKS the part-time question, never
+   what the answer is. A full-timer whose sections all land on one colour
+   is indistinguishable in the file from a part-timer, so both get asked;
+   the cost of asking is one click, the cost of not asking is a year. */
+const split = app.teachSplit(doc);
+t('a single-colour load is flagged for the question', true, split.lopsided);
+t('and the majority colour is identified', 'white', split.likely);
+t('the split counts class blocks, not day markers', allWhite.length, split.white);
+t('no class blocks land on the colour she does not teach', 0, split.red);
+
+/* The same year, but she teaches both rotations — nobody should be asked. */
+const bothParts = ['BEGIN:VCALENDAR', 'VERSION:2.0'];
+for (const d of year) {
+  if (d.type !== 'rotation') continue;
+  bothParts.push(ev(d.k, d.colour + ' (RJHS)'));
+  bothParts.push(ev(d.k, 'Theology 3-BD - 5 (4' + d.colour[0] + ')', true));
+}
+bothParts.push('END:VCALENDAR');
+const balanced = app.teachSplit(app.parseIcs(bothParts.join('\r\n') + '\r\n'));
+t('a balanced load is not flagged', false, balanced.lopsided);
+t('a balanced load is still judged', true, balanced.judged);
+
+/* Too little to go on — a nearly empty feed must not be judged either way. */
+const thin = app.teachSplit(app.parseIcs(['BEGIN:VCALENDAR', 'VERSION:2.0',
+  ev('20260820', 'White Day (RJHS)'), ev('20260820', 'Theology 3-BD - 5 (4W)', true),
+  'END:VCALENDAR'].join('\r\n') + '\r\n'));
+t('a thin feed is not judged', false, thin.judged);
+t('a thin feed is never flagged', false, thin.lopsided);
+
+/* Detection must not decide FOR them: the engine default is unchanged. */
+t('detection does not change the engine default', 0,
+  app.buildCleaned(doc, 'free', STAMP, 'one').offAdded);
+
 /* An irregular part-timer — two White days a week, not all of them. The
    rebuild must decline rather than invent days. */
 const irregular = ['BEGIN:VCALENDAR', 'VERSION:2.0'];

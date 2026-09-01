@@ -81,10 +81,39 @@ props as a closed day). `"white"` blocks every `Red Day`; `"red"` blocks every
 `White Day`; detected via `dayLabel(summary)`. School-closed/break days block regardless,
 In-Service / retreat / testing / IMPACT days are unaffected (not a Red/White rotation
 day), and `"both"` changes nothing — so the default is a no-op for everyone full-time.
-`buildCleaned` returns `offBlocked` alongside `closedBlocked`. In the page it's the
-"Are you here every day, or only when you teach?" question — which sits in Step 3 in the
-open, not behind the options toggle, because it is the one question on the page with no
-safe default.
+`buildCleaned` returns `offBlocked` alongside `closedBlocked`.
+
+**Who gets asked (`teachSplit`).** Making the question prominent for everyone was the first
+attempt and it was the wrong fix: the full-timer — most of the staff — then reads three cards
+to reach a button they were always going to press, and a page where everything is prominent
+has nothing prominent. So the file decides who is asked.
+
+`teachSplit(doc)` counts **class blocks by the colour of the day they land on**. Someone here
+every day teaching both rotations comes out roughly balanced; the real export that exposed
+this bug ran **90 blocks on White days against 6 on Red**. When the minority colour carries
+under a quarter of the load (`SPLIT_LOPSIDED`) and there are at least 20 blocks to judge from
+(`SPLIT_MIN_BLOCKS`), Step 3 leads with what it found, in the teacher's own numbers, and
+**does not render the Clean button until the question is answered**:
+
+> **This looks like a part-time schedule.**
+> 90 of your 96 class blocks are on **White days** — only 6 are on Red days.
+> **Are you at school on Red days too?**    [ Yes — I'm here every school day ]  [ No — I only come in on White days ]
+
+Both answers are equal-weight secondary buttons: a question with no default must not lean on
+one. A balanced file gets a single sentence instead — *"Your classes run on both Red and White
+days, so this is set to here every school day. Part-time? Change this."* — and the three-card
+grid stays hidden behind that link. A feed too thin to judge is never flagged.
+
+**The split decides whether to ask, never what the answer is.** A full-timer whose sections
+all happen to fall on one colour — a chair with one prep who is on campus daily — produces an
+identical file, and nothing in an `.ics` separates the two. Both are asked; the full-timer
+answers in one click. Asking someone who didn't need it costs a sentence. Not asking someone
+who did costs them a year of showing free on days they aren't there.
+
+**And the last screen states the effect, not the mechanics.** Step 4 leads with what the file
+will do once imported — *busy on N days, Out of Office on M days, everything else free* —
+counted from the generated text, so a wrong answer back in Step 3 is catchable before it
+reaches a calendar other people look at.
 
 **Rebuilding the days the feed never sent (`rotationPlan`).** Re-flagging is not enough on
 its own, and this is the failure that matters. **MyRJ emits a day-type marker only on days
@@ -267,12 +296,14 @@ node test/acceptance.js Schedule.ics                                          # 
 npm install playwright && node test/e2e.js Schedule.ics                       # real browser
 ```
 
-- **`rotation.js`** — 22 checks, no input file needed. Builds a synthetic school year with a
+- **`rotation.js`** — 31 checks, no input file needed. Builds a synthetic school year with a
   one-day holiday, a multi-day break and an exam week, hands the tool only the slice MyRJ
   would really send a White-day teacher, and asserts the rebuild recovers every Red day and
   invents none: no White day blocked, no break day invented, exam days untouched, the
   boundary day bounded to one, idempotent, and an irregular part-timer detected and
-  declined. Synthetic on purpose — the bug was found on a real teacher's export, and a real
+  declined. Also covers `teachSplit`: a single-colour load is flagged, a balanced one is not,
+  a thin feed is not judged, and detection never changes the engine default.
+  Synthetic on purpose — the bug was found on a real teacher's export, and a real
   export does not belong in a public repo.
 
 - **`verify.js`** — derives every expectation from an independent scan of whatever file it's
@@ -293,7 +324,7 @@ Verified against four real exports — `Schedule` (288 events), `My Calendars` (
 Out of Office, on weekdays, never colliding with a day already in the file, and a second run
 rebuilds nothing new.
 
-**Current state, and it is not all green.** `rotation.js` passes 22/22 and `verify.js` passes
+**Current state, and it is not all green.** `rotation.js` passes 31/31 and `verify.js` passes
 140/142 on `Schedule-test.ics` + a real part-time export. The two `verify` failures are
 pre-existing fixture gaps in `Schedule-test.ics` (two events carry no `CATEGORIES`), not
 regressions. **`acceptance.js` and `e2e.js` have been failing since the v2.0 wizard shipped** —

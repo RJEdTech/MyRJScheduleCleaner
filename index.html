@@ -781,6 +781,28 @@
   .finish-note { margin-top:1.1rem; }
   @media (max-width:560px){ .wrail .wr-name { display:none; } .wstep-title{font-size:.98rem;} }
   @media print { .wrail{display:none;} .wstep-body{display:block!important;} .wstep{opacity:1!important;} .wstep.is-locked{opacity:1!important;} }
+  /* The part-time question, asked of the people the file says it applies to.
+     A card rather than another row of options: it is a question with no
+     default, and it should not look like the settings around it. */
+  .pt-ask {
+    border: 1px solid var(--border-strong); border-radius: 3px;
+    background: var(--bg-card); padding: 1.1rem 1.25rem; margin: 1.4rem 0;
+  }
+  .pt-ask .pt-head { font-weight: 600; font-size: 1rem; margin-bottom: 0.4rem; color: var(--text); }
+  .pt-ask .pt-evidence { color: var(--text-mute); font-size: 0.9rem; line-height: 1.45; margin-bottom: 1rem; }
+  .pt-ask .pt-q { font-weight: 500; margin-bottom: 0.85rem; color: var(--text); }
+  .pt-ask .pt-btns { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .pt-note { color: var(--text-mute); font-size: 0.9rem; line-height: 1.5; margin: 1.4rem 0 0; }
+  .pt-more {
+    color: var(--raider); cursor: pointer; text-decoration: underline;
+    background: none; border: 0; padding: 0; font: inherit;
+  }
+  .pt-effect { margin-top: 1.5rem; }
+  .pt-effect ul { list-style: none; margin: 0.6rem 0 0; padding: 0; }
+  .pt-effect li {
+    padding: 0.5rem 0.75rem; border-left: 2px solid var(--border-strong);
+    background: var(--bg-elev); margin-bottom: 0.35rem; font-size: 0.92rem; color: var(--text);
+  }
 </style>
 </head>
 <body>
@@ -1125,8 +1147,10 @@
     <div class="wstep-body">
       <p class="wlead">Here's what's in your file. The all-day markers are what make you look busy &mdash; cleaning fixes those and leaves your classes alone.</p>
       <div class="stat-grid" id="stats"></div>
+      <div id="ptBlock"></div>
+      <div id="teachChoice" class="hidden">
       <div class="opt-label">Are you here every day, or only when you teach?</div>
-      <p class="opt-help">This is the one thing the file can't tell us. Most teachers are here every day &mdash; leave it on <b>Every school day</b>. If you're <b>part-time</b> and only come in on your teaching rotation, the tool blocks the days you're <i>not</i> here as <b>Out of Office</b>, so no one books you then &mdash; including the days MyRJ never sent you, which is most of them.</p>
+      <p class="opt-help">If you're <b>part-time</b> and only come in on your teaching rotation, the tool blocks the days you're <i>not</i> here as <b>Out of Office</b>, so no one books you then &mdash; including the days MyRJ never sent you, which is most of them.</p>
       <div class="path-grid" id="teachDays">
         <label class="path-card is-selected" id="teachBoth">
           <input type="radio" name="teachDays" value="both" checked>
@@ -1145,8 +1169,11 @@
           <span class="path-desc">Part-time. Every <b>White day</b> in the year is blocked as <b>Out of Office</b>. Red days stay free.</span>
         </label>
       </div>
-      <p class="subline">The recommended settings are already chosen. Most people just press <b>Clean my file</b>.</p>
-      <div class="action-row"><button class="btn bigbtn" id="btnRun" type="button">Clean my file</button></div>
+      </div>
+      <div id="runBlock">
+        <p class="subline">The recommended settings are already chosen. Most people just press <b>Clean my file</b>.</p>
+        <div class="action-row"><button class="btn bigbtn" id="btnRun" type="button">Clean my file</button></div>
+      </div>
       <details class="explainer"><summary>Change the options &mdash; colors, or remove the markers</summary>
         <div class="e-body">
           <div id="modesBlock">
@@ -2003,6 +2030,53 @@ function offDayEvent(ymd, name, stamp, lead, dtstamp){
   return applyStamp(lines, stamp, lead);
 }
 
+/* Which rotation does this teacher actually work? Count class blocks by the
+   colour of the day they land on. Someone here every day, teaching both
+   rotations, comes out roughly balanced; a part-timer does not — the real
+   export that exposed this bug ran 90 blocks on White days against 6 on Red.
+
+   This decides whether to ASK, never what the answer is. A full-timer whose
+   sections all happen to fall on one colour looks identical in the file, and
+   there is nothing in an .ics that separates them. Both get the question;
+   the full-timer answers it in one click. Asking someone who didn't need it
+   costs a sentence — not asking someone who did costs them a year of showing
+   free on days they aren't here. */
+var SPLIT_MIN_BLOCKS = 20;     // below this there isn't enough to judge
+var SPLIT_LOPSIDED   = 0.25;   // minority colour under a quarter of the load
+
+function teachSplit(doc){
+  var res = { white:0, red:0, unknown:0, total:0, minor:0, share:1,
+              lopsided:false, likely:null, judged:false };
+  var colour = {}, i;
+  for(i=0;i<doc.events.length;i++){
+    var e = doc.events[i];
+    if(!e.allDay) continue;
+    var y = ymdOf(e.lines);
+    if(!y || isClosedDay(e.summary)) continue;
+    var l = dayLabel(e.summary);
+    if(l === "White Day" || l === "Red Day") colour[y] = l;
+  }
+  for(i=0;i<doc.events.length;i++){
+    var ev = doc.events[i];
+    if(ev.allDay) continue;
+    var k = ymdOf(ev.lines);
+    var c = k ? colour[k] : null;
+    if(c === "White Day") res.white++;
+    else if(c === "Red Day") res.red++;
+    else res.unknown++;
+  }
+  res.total = res.white + res.red;
+  if(res.total < SPLIT_MIN_BLOCKS) return res;
+  res.judged = true;
+  res.minor  = res.white < res.red ? res.white : res.red;
+  res.share  = res.minor / res.total;
+  if(res.share < SPLIT_LOPSIDED){
+    res.lopsided = true;
+    res.likely   = res.white > res.red ? "white" : "red";
+  }
+  return res;
+}
+
 function buildCleaned(doc, mode, stamp, labelMode, teachDays){
   var out = [];
   var changed = 0, already = 0, removed = 0, timedKept = 0, allDayKept = 0, skipped = 0, closedBlocked = 0, offBlocked = 0, offAdded = 0, rotBroken = 0;
@@ -2174,6 +2248,105 @@ function init(){
     el.innerHTML = html;
   }
 
+
+  /* ---------- the part-time question ------------------------------------
+     Asked of the people whose file says it applies to them, and asked with
+     their own numbers. A full-timer sees one sentence; someone whose blocks
+     sit on a single rotation cannot reach the button without answering.
+     Making it loud for everyone was the previous design, and it just meant
+     more to read past for the ninety-five per cent who don't need it. */
+  function setTeach(v){
+    var r = document.querySelector('input[name="teachDays"][value="' + v + '"]');
+    if(!r) return;
+    r.checked = true;
+    var cards = $("teachDays").querySelectorAll(".path-card");
+    for(var i=0;i<cards.length;i++){
+      var inp = cards[i].querySelector("input");
+      if(inp && inp.checked) cards[i].classList.add("is-selected");
+      else cards[i].classList.remove("is-selected");
+    }
+  }
+  function teachEdit(){
+    show($("teachChoice"));
+    $("ptBlock").innerHTML = "";
+    show($("runBlock"));
+  }
+  function wireEdit(){
+    var e = $("ptEdit");
+    if(e) e.addEventListener("click", teachEdit);
+  }
+  function settled(html){
+    $("ptBlock").innerHTML = '<p class="pt-note">' + html +
+      ' <button type="button" class="pt-more" id="ptEdit">Change this</button></p>';
+    wireEdit();
+    show($("runBlock"));
+  }
+  function renderTeach(split){
+    setTeach("both");
+    if(!split.lopsided){
+      show($("runBlock"));
+      $("ptBlock").innerHTML = '<p class="pt-note">' + (split.judged
+        ? "Your classes run on both Red and White days, so this is set to <b>here every school day</b>."
+        : "This is set to <b>here every school day</b>.") +
+        ' <button type="button" class="pt-more" id="ptEdit">Part-time? Change this.</button></p>';
+      wireEdit();
+      return;
+    }
+    /* Lopsided: the button doesn't exist until this is answered. */
+    hide($("runBlock"));
+    var big   = split.likely === "white" ? "White" : "Red";
+    var small = split.likely === "white" ? "Red" : "White";
+    var maj   = split.total - split.minor, min = split.minor;
+    $("ptBlock").innerHTML =
+      '<div class="pt-ask">' +
+        '<div class="pt-head">This looks like a part-time schedule.</div>' +
+        '<div class="pt-evidence"><b>' + maj + '</b> of your ' + split.total +
+          ' class blocks are on <b>' + big + ' days</b> &mdash; ' +
+          (min ? 'only <b>' + min + '</b> ' + (min === 1 ? 'is' : 'are') + ' on ' + small + ' days.'
+               : '<b>none</b> are on ' + small + ' days.') + '</div>' +
+        '<div class="pt-q">Are you at school on ' + small + ' days too?</div>' +
+        '<div class="pt-btns">' +
+          '<button class="btn secondary" id="ptYes" type="button">Yes &mdash; I\'m here every school day</button>' +
+          '<button class="btn secondary" id="ptNo" type="button">No &mdash; I only come in on ' + big + ' days</button>' +
+        '</div>' +
+      '</div>';
+    $("ptYes").addEventListener("click", function(){
+      setTeach("both");
+      settled("Set to <b>here every school day</b>. Red and White days both stay free.");
+    });
+    $("ptNo").addEventListener("click", function(){
+      setTeach(split.likely);
+      settled("Set to <b>only " + big + " days</b>. Every " + small +
+        " day in the year will be blocked as <b>Out of Office</b> &mdash; including the ones MyRJ never sent you.");
+    });
+  }
+
+  /* What the file will actually do once imported, in three numbers. The
+     last chance to catch a wrong answer up in step 3 before it reaches a
+     calendar other people look at. */
+  function effectSummary(text){
+    var blocks = text.split("BEGIN:VEVENT"), busy = {}, oof = {}, i, k;
+    for(i=1;i<blocks.length;i++){
+      var b = blocks[i];
+      var head = /DTSTART[^:\r\n]*:/.exec(b);
+      var m = /DTSTART[^:\r\n]*:(\d{8})/.exec(b);
+      if(!m || !head) continue;
+      if(/X-MICROSOFT-CDO-BUSYSTATUS:OOF/.test(b)) oof[m[1]] = 1;
+      else if(!/VALUE=DATE/i.test(head[0])) busy[m[1]] = 1;
+    }
+    var nb = 0, no = 0;
+    for(k in busy) if(Object.prototype.hasOwnProperty.call(busy,k)) nb++;
+    for(k in oof)  if(Object.prototype.hasOwnProperty.call(oof,k))  no++;
+    var li = '<li><b>Busy</b> on <b>' + nb + ' day' + (nb === 1 ? '' : 's') +
+             '</b> &mdash; the days you teach</li>';
+    if(no) li += '<li><b>Out of Office</b> on <b>' + no + ' day' + (no === 1 ? '' : 's') +
+                 '</b> &mdash; days off and days you\'re not here</li>';
+    li += '<li>Every other day stays <b>free</b></li>';
+    return '<div class="pt-effect">' +
+      '<div class="opt-label" style="margin-top:0">What this file will do to your calendar</div>' +
+      '<ul>' + li + '</ul></div>';
+  }
+
   /* ---------- wizard step controller ------------------------------------
      One step visible at a time. Finished steps collapse to a check and can
      be reopened; steps ahead of where you've reached stay locked. */
@@ -2249,6 +2422,8 @@ function init(){
         '<div class="s-label">Timed &mdash; will block time</div></div>'+
       '<div class="stat-card flag"><div class="s-value">'+ad.length+'</div>'+
         '<div class="s-label">All-day &mdash; the problem</div></div>';
+
+    renderTeach(teachSplit(parsed));
 
     fillTable($("adTable"), tally(ad));
     fillTable($("tdTable"), tally(td));
@@ -2435,7 +2610,7 @@ function init(){
         '<label for="outNameInput">Save it as</label>'+
         '<input type="text" id="outNameInput" value="'+esc(outName)+'" spellcheck="false" autocomplete="off">'+
         '<span class="r-foot" style="margin:0">rename it here if the download picked an unhelpful name</span>'+
-      '</div>'+ labelHtml;
+      '</div>'+ effectSummary(res.text) + labelHtml;
     $("btnDl").addEventListener("click", downloadFile);
 
     var tags = document.querySelectorAll(".stamp-dyn");
@@ -2494,6 +2669,7 @@ if(typeof module !== "undefined" && module.exports){
                      applyStamp:applyStamp, foldLine:foldLine, dedupe:dedupe,
                      parseCourse:parseCourse, dayLabel:dayLabel, safeCategory:safeCategory, isClosedDay:isClosedDay,
                      rotationPlan:rotationPlan, offDayEvent:offDayEvent, ymdOf:ymdOf, feedStamp:feedStamp,
+                     teachSplit:teachSplit,
                      labelPlan:labelPlan, leadLabels:leadLabels, makeStamp:makeStamp,
                      STAMP_BASE:STAMP_BASE };
 }
