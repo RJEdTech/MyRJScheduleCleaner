@@ -385,6 +385,4 @@ anything across downloads.
 This generalises past MyRJ. Any Blackbaud onCampus school hits the identical bug, and
 the same pattern applies to any `.ics` feed that omits `TRANSP` on all-day events.
 
----
 
-Regis Jesuit High School · Educational Technology
