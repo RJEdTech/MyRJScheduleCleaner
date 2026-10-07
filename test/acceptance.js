@@ -253,10 +253,10 @@ const QB_LIGHT = {
   '--text':'#1a1a1a','--text-mute':'#595959','--text-dim':'#999999',
   '--border':'#e5e5e5','--border-strong':'#c5c5c5','--watermark-opacity':'0.05' };
 const QB_DARK = {
-  '--bg':'#0a0a0a','--bg-elev':'#161616','--bg-card':'#1c1c1c','--bg-hover':'#222222',
+  '--bg':'#15161a','--bg-elev':'#1d1f24','--bg-card':'#22242a','--bg-hover':'#282a30',
   '--raider':'#C11430','--raider-hot':'#e0223f','--raider-tint':'rgba(193, 20, 48, 0.15)',
   '--text':'#ffffff','--text-mute':'#a0a0a0','--text-dim':'#666666',
-  '--border':'#2a2a2a','--border-strong':'#3a3a3a','--watermark-opacity':'0.04' };
+  '--border':'#2e3036','--border-strong':'#3a3a3a','--watermark-opacity':'0.04' };
 const rootBlock = /:root\s*\{([\s\S]*?)\}/.exec(css)[1].replace(/\s/g,'');
 const darkBlock = /\[data-theme="dark"\]\s*\{([\s\S]*?)\}/.exec(css)[1].replace(/\s/g,'');
 const missingTok = (blk,tok) => Object.keys(tok).filter(k => !blk.includes(k+':'+tok[k].replace(/\s/g,'')+';'));
