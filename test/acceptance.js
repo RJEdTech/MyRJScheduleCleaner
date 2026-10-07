@@ -241,9 +241,9 @@ check('Shipped: no Google Fonts / webfont hosts', 0, count(html, /fonts\.googlea
 check('Shipped: no @font-face rules', 0, count(html, /@font-face\s*\{/gi));
 check('Shipped: no external <script src>', 0, count(html, /<script[^>]+src\s*=\s*["'](?!data:)/gi));
 check('Shipped: url() in CSS is a data: URI only', 0, count(styleBlock, /url\((?!\s*['"]?data:)/gi));
-check('Shipped: the only url() in CSS is the watermark', 1, count(styleBlock, /url\(/g));
+check('Shipped: no url() in CSS (watermark removed)', 0, count(styleBlock, /url\(/g));
 check('Shipped: RJ logo inlined as data URI', true, /<img class="rj-mark" src="data:image\/png;base64,/.test(html));
-check('Shipped: watermark inlined as data URI', true, /background-image:\s*url\('data:image\/webp;base64,/.test(html));
+check('Shipped: no watermark image', false, /background-image:\s*url\('data:image\/webp;base64,/.test(html));
 
 /* ---- design system: matches Raider Quiz Builder ---- */
 const css = styleBlock;
@@ -270,7 +270,7 @@ check('System: house component classes present', '',
       ['.site-header','.header-left','.rj-mark','.brand','.tagline','.theme-toggle','.workflow-strip',
        '.workflow-steps','.workflow-step','.step-num','.workflow-arrow','.dropzone','.validation',
        '.v-header','.v-summary','.btn','.btn.secondary','.download-panel','.resource-card',
-       '.path-card','.site-footer','.watermark','.copy-feedback'].filter(c => !css.includes(c)).join(','));
+       '.path-card','.site-footer','.copy-feedback'].filter(c => !css.includes(c)).join(','));
 check('System: no green anywhere', 0, count(css, /3ecf8e|06281a|#0f0f1a/gi));
 check('System: only Raider Red + neutral greys as hues', 0,
       [...new Set((css.match(/#[0-9a-f]{6}\b/gi) || []))]
