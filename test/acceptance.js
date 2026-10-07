@@ -250,12 +250,12 @@ const css = styleBlock;
 const QB_LIGHT = {
   '--bg':'#ffffff','--bg-elev':'#fafafa','--bg-card':'#f3f3f3','--bg-hover':'#ededed',
   '--raider':'#C11430','--raider-hot':'#a0102a','--raider-tint':'rgba(193, 20, 48, 0.08)',
-  '--text':'#1a1a1a','--text-mute':'#595959','--text-dim':'#999999',
+  '--text':'#1a1a1a','--text-mute':'#595959','--text-dim':'#6c6c6c',
   '--border':'#e5e5e5','--border-strong':'#c5c5c5','--watermark-opacity':'0.05' };
 const QB_DARK = {
   '--bg':'#15161a','--bg-elev':'#1d1f24','--bg-card':'#22242a','--bg-hover':'#282a30',
   '--raider':'#C11430','--raider-hot':'#e0223f','--raider-tint':'rgba(193, 20, 48, 0.15)',
-  '--text':'#ffffff','--text-mute':'#a0a0a0','--text-dim':'#666666',
+  '--text':'#ffffff','--text-mute':'#a0a0a0','--text-dim':'#8c8c8c',
   '--border':'#2e3036','--border-strong':'#3a3a3a','--watermark-opacity':'0.04' };
 const rootBlock = /:root\s*\{([\s\S]*?)\}/.exec(css)[1].replace(/\s/g,'');
 const darkBlock = /\[data-theme="dark"\]\s*\{([\s\S]*?)\}/.exec(css)[1].replace(/\s/g,'');
