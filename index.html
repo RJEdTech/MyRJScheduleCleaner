@@ -418,6 +418,14 @@
     color: var(--text-dim); font-size: 15px; line-height: 1.45;
   }
   code.stamp-name { white-space: nowrap; }
+  .stop-callout {
+    background: var(--raider-tint); border: 2px solid var(--raider); border-left-width: 8px;
+    border-radius: 3px; padding: 1rem 1.25rem; margin: 0 0 1.5rem; color: var(--text); font-size: 16px; line-height: 1.55;
+  }
+  .stop-callout .stop-head { color: var(--raider); font-weight: 700; font-size: 1.1rem; margin-bottom: 0.35rem; }
+  .stop-callout p { margin: 0 0 0.5rem; }
+  .stop-callout p:last-child { margin-bottom: 0; }
+  .stop-callout.small { margin: 0.9rem 0 0; padding: 0.75rem 1rem; font-size: 15.5px; }
 
   /* ===== Converted link panel ===== */
   .converted {
@@ -906,6 +914,12 @@ body.fs .rj-masthead::before{display:none}
 
   
 
+  <div class="stop-callout" role="note">
+    <div class="stop-head">The file MyRJ gives you never goes straight into Outlook.</div>
+    <p>Step 1 downloads it, Step 2 loads it here, and Step 4 hands you a <b>clean copy</b> &mdash; that clean copy is the only file you import. Importing MyRJ's file directly is what blocks your whole day and leaves your Bookings page with no open times.</p>
+    <p><b>Already imported it as-is?</b> Clear it out first with <a href="#remove"><b>Removing a past import</b></a> (every MyRJ event carries the <code class="stamp-name">Podium</code> category, so it's one selection), then start at Step 1. Importing again on top only gives you everything twice.</p>
+  </div>
+
   <div class="validation success helpline">
     <div class="v-header">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.1 9.1 0 0 1-4-.9L3 20l1.4-4.2A8.4 8.4 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>
@@ -1103,6 +1117,7 @@ body.fs .rj-masthead::before{display:none}
         <p class="wlead" style="margin:1rem 0 .7rem">Your link is ready. Just one button:</p>
         <a class="btn bigbtn" id="btnDownload" href="#" target="_blank" rel="noopener">Download my schedule file</a>
         <p class="subline">It saves to your <b>Downloads</b> folder. Most browsers won't ask you anything &mdash; a tab may flash open and closed. <b>If it looks like nothing happened, it worked</b> &mdash; the file is in Downloads. Then move to the next step to load it.</p>
+        <div class="stop-callout small" role="note"><b>Don't import this file into Outlook.</b> It's MyRJ's raw copy &mdash; the one that marks you busy all day. It goes into Step 2 here; Outlook only ever gets the clean file from Step 4.</div>
         <details class="explainer"><summary>Nothing downloaded &mdash; let me do it by hand</summary>
           <div class="e-body">
             <p>Copy this link, paste it into a new browser tab, and press Enter:</p>
@@ -1284,7 +1299,7 @@ body.fs .rj-masthead::before{display:none}
       <p><b>Then, in Outlook:</b> <span class="h-tag">New Outlook &amp; Outlook on the web</span></p>
     <ol>
       <li><b>Add calendar</b> &rarr; <b>Upload from file</b></li>
-      <li>Browse to the file you just downloaded</li>
+      <li>Browse to the <b>clean</b> file you just downloaded &mdash; its name ends in <code>-clean.ics</code> unless you changed it. <b>Not</b> the file from Step 1.</li>
       <li>Set the <b>Add to</b> dropdown &mdash; the box under the file name &mdash; to your <b>main calendar</b>, the one Outlook made for you. Not a new one, and not a calendar you added yourself.</li>
       <li><b>Add to calendar</b></li>
     </ol>
