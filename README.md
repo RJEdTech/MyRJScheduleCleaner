@@ -386,3 +386,7 @@ This generalises past MyRJ. Any Blackbaud onCampus school hits the identical bug
 the same pattern applies to any `.ics` feed that omits `TRANSP` on all-day events.
 
 
+
+## License
+
+© 2026 Jason Beyer, RJ Ed Tech. Licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/): free to share and adapt for non-commercial use with credit. See [LICENSE](LICENSE) for what the license does not cover.
